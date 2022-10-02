@@ -127,7 +127,7 @@ void biosDecode(SH2_struct *context) {
 }
 
 
-int SH2KronosInterpreterInit()
+int SH2KronosInterpreterInit(void)
 {
 
    int i,j;
@@ -209,7 +209,7 @@ int SH2KronosInterpreterInit()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SH2KronosInterpreterDeInit()
+void SH2KronosInterpreterDeInit(void)
 {
    // DeInitialize any internal variables here
 }
@@ -511,7 +511,7 @@ void SH2KronosInterpreterSendInterrupt(SH2_struct *context, u8 vector, u8 level)
 
 void SH2KronosInterpreterRemoveInterrupt(SH2_struct *context, u8 vector, u8 level) {
   u32 i, i2;
-  interrupt_struct tmp;
+  //interrupt_struct tmp;
   int hit = -1;
 
   for (i = 0; i < context->NumberOfInterrupts; i++) {
@@ -555,7 +555,7 @@ void SH2KronosInterpreterSetInterrupts(SH2_struct *context, int num_interrupts,
 }
 
 void SH2KronosWriteNotify(SH2_struct *context, u32 start, u32 length){
-  int i;
+  unsigned int i;
   for (i=0; i<length; i+=2) {
     int id = ((start + i) >> 20) & 0xFFF;
     int addr = (start + i) >> 1;

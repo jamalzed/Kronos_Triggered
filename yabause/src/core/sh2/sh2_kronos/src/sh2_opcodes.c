@@ -612,9 +612,9 @@ static void SH2div1(SH2_struct * sh, u32 n, u32 m)
 
 static void SH2dmuls(SH2_struct * sh, u32 n, u32 m)
 {
-   u32 RnL,RnH,RmL,RmH,Res0,Res1,Res2;
-   u32 temp0,temp1,temp2,temp3;
-   s32 tempm,tempn,fnLmL;
+   //u32 RnL,RnH,RmL,RmH,Res0,Res1,Res2;
+   //u32 temp0,temp1,temp2,temp3;
+   //s32 tempm,tempn,fnLmL;
 
    const u64 result = (s64)(s32)sh->regs.R[n] * (s32)sh->regs.R[m];
 
