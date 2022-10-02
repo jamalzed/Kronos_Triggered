@@ -3384,7 +3384,11 @@ FLAC__StreamDecoderLengthStatus file_length_callback_(const FLAC__StreamDecoder 
 
 	if(decoder->private_->file == stdin)
 		return FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED;
+#if _MSC_VER && !__INTEL_COMPILER
+	else if(flac_fstat(_fileno(decoder->private_->file), &filestats) != 0)
+#else
 	else if(flac_fstat(fileno(decoder->private_->file), &filestats) != 0)
+#endif
 		return FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR;
 	else {
 		*stream_length = (FLAC__uint64)filestats.st_size;

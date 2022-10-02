@@ -103,7 +103,9 @@ ia32_cpu_info (FLAC__CPUInfo *info)
 	(void) info;
 #else
 	FLAC__bool ia32_osxsave = false;
+#if !defined FLAC__NO_ASM && (defined FLAC__HAS_NASM || FLAC__HAS_X86INTRIN)
 	FLAC__uint32 flags_eax, flags_ebx, flags_ecx, flags_edx;
+#endif
 
 #if !defined FLAC__NO_ASM && (defined FLAC__HAS_NASM || FLAC__HAS_X86INTRIN)
 	info->use_asm = true; /* we assume a minimum of 80386 with FLAC__CPU_IA32 */

@@ -114,7 +114,11 @@ static FLAC__bool ensure_null_terminated_(FLAC__byte **entry, unsigned length)
  */
 static FLAC__bool copy_cstring_(char **to, const char *from)
 {
+#if _MSC_VER && !__INTEL_COMPILER
+	char *copy = _strdup(from);
+#else
 	char *copy = strdup(from);
+#endif
 	FLAC__ASSERT(to != NULL);
 	if (copy) {
 		free(*to);
@@ -1124,7 +1128,7 @@ FLAC_API FLAC__bool FLAC__metadata_object_seektable_template_append_spaced_point
 		if (num > 32768) {
 			/* Set the bound and recalculate samples accordingly. */
 			num = 32768;
-			samples = total_samples / num;
+			samples = (unsigned) (total_samples / num);
 		}
 
 		i = seek_table->num_points;

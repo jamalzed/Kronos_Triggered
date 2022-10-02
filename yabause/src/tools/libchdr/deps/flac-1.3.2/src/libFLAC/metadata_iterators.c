@@ -30,6 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if _MSC_VER && !__INTEL_COMPILER && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #ifdef HAVE_CONFIG_H
 #  include <config.h>
 #endif
@@ -489,11 +493,19 @@ FLAC_API FLAC__bool FLAC__metadata_simple_iterator_init(FLAC__Metadata_SimpleIte
 	if(!read_only && preserve_file_stats)
 		iterator->has_stats = get_file_stats_(filename, &iterator->stats);
 
+#if _MSC_VER && !__INTEL_COMPILER
+	if(0 == (iterator->filename = _strdup(filename))) {
+#else
 	if(0 == (iterator->filename = strdup(filename))) {
+#endif
 		iterator->status = FLAC__METADATA_SIMPLE_ITERATOR_STATUS_MEMORY_ALLOCATION_ERROR;
 		return false;
 	}
+#if _MSC_VER && !__INTEL_COMPILER
+	if(0 != tempfile_path_prefix && 0 == (iterator->tempfile_path_prefix = _strdup(tempfile_path_prefix))) {
+#else
 	if(0 != tempfile_path_prefix && 0 == (iterator->tempfile_path_prefix = strdup(tempfile_path_prefix))) {
+#endif
 		iterator->status = FLAC__METADATA_SIMPLE_ITERATOR_STATUS_MEMORY_ALLOCATION_ERROR;
 		return false;
 	}
@@ -1543,7 +1555,11 @@ static FLAC__bool chain_read_(FLAC__Metadata_Chain *chain, const char *filename,
 
 	chain_clear_(chain);
 
+#if _MSC_VER && !__INTEL_COMPILER
+	if(0 == (chain->filename = _strdup(filename))) {
+#else
 	if(0 == (chain->filename = strdup(filename))) {
+#endif
 		chain->status = FLAC__METADATA_CHAIN_STATUS_MEMORY_ALLOCATION_ERROR;
 		return false;
 	}
