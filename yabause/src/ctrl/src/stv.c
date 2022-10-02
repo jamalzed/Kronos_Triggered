@@ -72,16 +72,18 @@ const u8 ShienryuNV[0x80]={
 
 static u8 bitswap8(u8 in, const u8* vec)
 {
+  int i;
   u8 ret = 0;
-  for (int i = 0; i<8; i++) {
+  for (i = 0; i<8; i++) {
     ret |= ((in >> vec[i])&0x1)<<(7-i);
   }
   return ret;
 }
 
 void sanjeon_init(void) {
+  int x;
   const u8 vec1[8] = {6,0,5,7,  1,3,4,2};
-  for (int x = 0; x < 0x3000000; x++)
+  for (x = 0; x < 0x3000000; x++)
   {
     T1WriteByte(CartridgeArea->rom, x, bitswap8(T1ReadByte(CartridgeArea->rom, x)^0xff,vec1));
   }
@@ -2355,7 +2357,8 @@ int copyBios(JZFile *zip, void* id) {
     char filename[MAX_LENGTH_FILENAME];
     char* biosname = NULL;
     u8* data;
-    unsigned int i,j, dataAvailable;
+	int i;
+    unsigned int j, dataAvailable;
     rominfo* info = (rominfo*)id;
     int gameId = -1;
     if (info != NULL) gameId = info->gameId;
@@ -2432,7 +2435,8 @@ int copyFile(JZFile *zip, void* id) {
     JZFileHeader header;
     char filename[MAX_LENGTH_FILENAME];
     u8* data;
-    int i,j, dataAvailable;
+	int i, dataAvailable;
+    unsigned int j;
     rominfo* info = (rominfo*)id;
     int gameId = -1;
     if (info != NULL) gameId = info->gameId;
@@ -2501,6 +2505,7 @@ int copyFile(JZFile *zip, void* id) {
 
 int recordCallback(JZFile *zip, int idx, JZFileHeader *header, char *filename, void *user_data) {
     long offset;
+	char *last;
     rominfo* info = (rominfo*)user_data;
     offset = zip->tell(zip); // store current position
 
@@ -2511,9 +2516,9 @@ int recordCallback(JZFile *zip, int idx, JZFileHeader *header, char *filename, v
 
     LOGSTV("%s\n", filename);
 #ifdef __LIBRETRO__
-    char *last = (char *)strrchr(info->filename, PATH_DEFAULT_SLASH_C());
+    last = (char *)strrchr(info->filename, PATH_DEFAULT_SLASH_C());
 #else
-    char *last = (char *)strrchr(info->filename, '/');
+    last = (char *)strrchr(info->filename, '/');
 #endif
     if (last != NULL) {
       if (strcmp(last+1, "stvbios.zip") == 0) {
@@ -2757,9 +2762,13 @@ int STVGetRomList(const char* path, int force){
 int STVGetRomList(const char* path, int force){
 //List number of files in directory
   FILE *fp;
+  HANDLE hFind;
+  WIN32_FIND_DATAA FindFileData;
   int i, nbGames = 0;
   char savefile[MAX_LENGTH_FILEPATH];
   char pathfile[MAX_LENGTH_FILEPATH];
+  unsigned int len;
+  unsigned char *file;
   memset(availableGames, 0x0, sizeof(GameLink)*NB_STV_GAMES);
   snprintf(savefile, MAX_LENGTH_FILEPATH, "%s/gamelist.save", path);
   snprintf(pathfile, MAX_LENGTH_FILEPATH, "%s/*.zip", path);
@@ -2767,11 +2776,9 @@ int STVGetRomList(const char* path, int force){
     nbGames = loadGames(savefile);
     if (nbGames != 0) return nbGames;
   }
-  HANDLE hFind;
-  WIN32_FIND_DATAA FindFileData;
   //Force a detection of the bios first
-  unsigned int len = strlen(path) + strlen("/") + strlen("stvbios.zip") + 1;
-  unsigned char *file = malloc(len);
+  len = strlen(path) + strlen("/") + strlen("stvbios.zip") + 1;
+  file = malloc(len);
   snprintf(file, len, "%s/stvbios.zip", path);
   updateGameList(file, &nbGames);
   free(file);
@@ -2850,9 +2857,9 @@ int loadGames(char* path) {
 }
 
 int STVGetSingle(const char *pathfile, const char *biospath, int* id){
-  int i, nbGames = 0;
+  int nbGames = 0;
+//  struct dirent *dir;
   memset(availableGames, 0x0, sizeof(GameLink)*NB_STV_GAMES);
-  struct dirent *dir;
   //Force a detection of the bios first
   updateGameList(biospath, &nbGames);
   *id = updateGameList(pathfile, &nbGames);
@@ -2876,11 +2883,12 @@ int STVSingleInit(const char *gamepath, const char *biospath, const char *eeprom
 }
 
 int STVInit(int id, const char *path, const char *eepromdir, int favorite_region){
+  int nbGames;
   if (favorite_region != 0) stv_favorite_region = favorite_region;
   cryptoReset();
   if (CartridgeArea->carttype != CART_ROMSTV) return 0;
 #ifndef __LIBRETRO__
-  int nbGames = STVGetRomList(path, 0);
+  nbGames = STVGetRomList(path, 0);
   if (nbGames == 0) return -1;
   if (nbGames <= id) return -1;
 #endif

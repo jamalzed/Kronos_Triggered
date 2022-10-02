@@ -54,6 +54,9 @@
 #include "db.h"
 
 #ifdef HAVE_LIBSDL
+  #ifndef SDL_MAIN_HANDLED
+  #define SDL_MAIN_HANDLED
+  #endif
 #if defined(__APPLE__) || defined(GEKKO)
  #ifdef HAVE_LIBSDL2
   #include <SDL2/SDL.h>
@@ -173,7 +176,7 @@ void resetSyncVideo(void) {
 
 void YabauseChangeTiming(int freqtype) {
    // Setup all the variables related to timing
-
+   int i;
    const double freq_base = yabsys.IsPal ? 28437500.0
       : (39375000.0 / 11.0) * 8.0;  // i.e. 8 * 3.579545... = 28.636363... MHz
    const double freq_mult = (freqtype == CLKTYPE_26MHZ) ? 15.0/16.0 : 1.0;
@@ -188,10 +191,10 @@ void YabauseChangeTiming(int freqtype) {
    yabsys.LineCount = 0;
    yabsys.CurSH2FreqType = freqtype;
 
-   for (int i = 0; i < DECILINE_STEP; i++) {
+   for (i = 0; i < DECILINE_STEP; i++) {
      yabsys.LineCycle[i] = (u32) (line_clk_cnt * (float)i/(float)(DECILINE_STEP - 1));
    }
-   for (int i = DECILINE_STEP-1; i>0; i--) {
+   for (i = DECILINE_STEP-1; i>0; i--) {
      yabsys.LineCycle[i] -= yabsys.LineCycle[i-1];
    }
 
@@ -334,18 +337,25 @@ TRACE_EMULATOR("YabauseInit");
    // Initialize both cpu's
    if (SH2Init(init->sh2coretype) != 0)
    {
+	  MessageBox(NULL, TEXT("sh2 codre type failure"), TEXT("ERROR"), MB_OK);
       YabSetError(YAB_ERR_CANNOTINIT, _("SH2"));
       return -1;
    }
 
-   if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
+   if ((BiosRom = T2MemoryInit(0x80000)) == NULL) {
+	  MessageBox(NULL, TEXT("bios load failure"), TEXT("ERROR"), MB_OK);
       return -1;
+   }
 
-   if ((HighWram = T2MemoryInit(0x100000)) == NULL)
+   if ((HighWram = T2MemoryInit(0x100000)) == NULL) {
+	  MessageBox(NULL, TEXT("HighWram failure"), TEXT("ERROR"), MB_OK);
       return -1;
+   }
 
-   if ((LowWram = T2MemoryInit(0x100000)) == NULL)
+   if ((LowWram = T2MemoryInit(0x100000)) == NULL) {
+	  MessageBox(NULL, TEXT("LowWram failure"), TEXT("ERROR"), MB_OK);
       return -1;
+   }
 
    if (BackupInit(init->buppath, init->extend_backup) != 0)
    {
@@ -490,6 +500,7 @@ TRACE_EMULATOR("YabauseInit");
 
    if (init->skip_load)
    {
+       MessageBox(NULL, TEXT("skip load third error set"), TEXT("pass"), MB_OK);
 	   return 0;
    }
 
@@ -499,6 +510,7 @@ TRACE_EMULATOR("YabauseInit");
       {
          if (yabsys.emulatebios)
          {
+			MessageBox(NULL, TEXT("bios load error"), TEXT("pass"), MB_OK);
             YabSetError(YAB_ERR_CANNOTINIT, _("Game"));
             return -2;
          }
@@ -688,8 +700,10 @@ static int fps = 0;
 static int vdp1fps = 0;
 static void FPSDisplay(void)
 {
+  u64 now;
+
   fpsframecount++;
-  u64 now = YabauseGetTicks();
+  now = YabauseGetTicks();
   if (now >= fpsticks + yabsys.tickfreq)
   {
     u64 delta = now - (fpsticks + yabsys.tickfreq);
@@ -729,18 +743,22 @@ u64 g_m68K_dec_cycle = 0;
 int YabauseEmulate(void) {
    int ret = 0;
    int oneframeexec = 0;
-   yabsys.frame_count++;
+
+   // ignore was created to fix a compilation error on MSVC 2010, and its value is otherwise unused in the function
+   int ignore = yabsys.frame_count++;
 
    const u32 usecinc = yabsys.DecilineUsec;
 
-   unsigned int m68kcycles;       // Integral M68k cycles per call
-   unsigned int m68kcenticycles;  // 1/100 M68k cycles per call
+   //unsigned int m68kcycles;       // Integral M68k cycles per call
+   //unsigned int m68kcenticycles;  // 1/100 M68k cycles per call
 
    u64 m68k_cycles_per_deciline = 0;
    u64 scsp_cycles_per_deciline = 0;
 
    int lines = 0;
    int frames = 0;
+
+   u64 cpu_emutime = 0;
 
    if (yabsys.IsPal)
    {
@@ -765,7 +783,6 @@ int YabauseEmulate(void) {
    SSH2->frtcycles = 0;
 //   SH2OnFrame(MSH2);
 //   SH2OnFrame(SSH2);
-   u64 cpu_emutime = 0;
 
    TRACE_EMULATOR("YabauseEmulate");
 
@@ -1074,8 +1091,9 @@ void YabauseSpeedySetup(void)
 
    // Set Master SH2 registers accordingly
    SH2GetRegisters(MSH2, &MSH2->regs);
-   for (i = 0; i < 15; i++)
+   for (i = 0; i < 15; i++) {
       MSH2->regs.R[i] = 0x00000000;
+   }
    MSH2->regs.R[15] = 0x06002000;
    MSH2->regs.SR.all = 0x00000000;
    MSH2->regs.GBR = 0x00000000;
@@ -1152,8 +1170,10 @@ int YabauseQuickLoadGame(void)
    Cs2Area->cdi->ReadTOC(Cs2Area->TOC);
 
    // read in lba 0/FAD 150
-   if ((lgpartition = Cs2ReadUnFilteredSector(150)) == NULL)
+   if ((lgpartition = Cs2ReadUnFilteredSector(150)) == NULL) {
+       MessageBox(NULL, TEXT("Cs2ReadUnFilteredSector fail"), TEXT("fail"), MB_OK);
       return -1;
+   }
 
    // Make sure we're dealing with a saturn game
    buffer = lgpartition->block[lgpartition->numblocks - 1]->data;
@@ -1190,8 +1210,10 @@ int YabauseQuickLoadGame(void)
       // Copy over ip to 0x06002000
       for (i = 0; i < blocks; i++)
       {
-         if ((lgpartition = Cs2ReadUnFilteredSector(150+i)) == NULL)
+         if ((lgpartition = Cs2ReadUnFilteredSector(150+i)) == NULL) {
+       MessageBox(NULL, TEXT("Cs2ReadUnFilteredSector fail"), TEXT("fail"), MB_OK);
             return -1;
+		 }
 
          buffer = lgpartition->block[lgpartition->numblocks - 1]->data;
 
@@ -1221,8 +1243,10 @@ int YabauseQuickLoadGame(void)
       // First Program
 
       // Figure out where the first program is located
-      if ((lgpartition = Cs2ReadUnFilteredSector(166)) == NULL)
+      if ((lgpartition = Cs2ReadUnFilteredSector(166)) == NULL) {
+       MessageBox(NULL, TEXT("Cs2ReadUnFilteredSector(166) fail"), TEXT("fail"), MB_OK);
          return -1;
+	  }
 
       // Figure out root directory's location
 
@@ -1236,8 +1260,10 @@ int YabauseQuickLoadGame(void)
       lgpartition->numblocks = 0;
 
       // Now then, fetch the root directory's records
-      if ((lgpartition = Cs2ReadUnFilteredSector(dirrec.lba+150)) == NULL)
+      if ((lgpartition = Cs2ReadUnFilteredSector(dirrec.lba+150)) == NULL) {
+       MessageBox(NULL, TEXT("Cs2ReadUnFilteredSector(dirrec.lba+150) fail"), TEXT("fail"), MB_OK);
          return -1;
+	  }
 
       buffer = lgpartition->block[lgpartition->numblocks - 1]->data;
 
@@ -1262,8 +1288,10 @@ int YabauseQuickLoadGame(void)
       // Copy over First Program to addr
       for (i = 0; i < blocks; i++)
       {
-         if ((lgpartition = Cs2ReadUnFilteredSector(150+dirrec.lba+i)) == NULL)
+         if ((lgpartition = Cs2ReadUnFilteredSector(150+dirrec.lba+i)) == NULL) {
+       MessageBox(NULL, TEXT("Cs2ReadUnFilteredSector(dirrec.lba+i) fail"), TEXT("fail"), MB_OK);
             return -1;
+		 }
 
          buffer = lgpartition->block[lgpartition->numblocks - 1]->data;
 
@@ -1330,15 +1358,13 @@ int YabauseQuickLoadGame(void)
       Vdp2ColorRamWriteWord(MSH2, Vdp2ColorRam, 0xFF, 0x0000);
 
       //Workaround for Radiant silergun boot in Emulated bios
-      for (int i = 0; i < 0x80000; i += 0x20) {
+      for (i = 0; i < 0x80000; i += 0x20) {
         Vdp1RamWriteWord(NULL, Vdp1Ram, i, 0x8000);
       }
 
    }
    else
    {
-      // Ok, we're not. Time to bail!
-
       // Free Block
       lgpartition->size = 0;
       Cs2FreeBlock(lgpartition->block[lgpartition->numblocks - 1]);
