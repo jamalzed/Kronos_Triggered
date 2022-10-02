@@ -16,14 +16,24 @@
     You should have received a copy of the GNU General Public License
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 
 /*! \file peripheral.c
     \brief Peripheral shared functions.
 */
 
+#include <math.h>
+#include <stdio.h>
 #include "debug.h"
 #include "peripheral.h"
+
+#define per_round(q)	(q >= 0) ? floor(q + 0.5f) : ceil(q - 0.5f)
 
 const char * PerPadNames[] =
 {
@@ -64,7 +74,11 @@ typedef struct {
 	void (*Press)(void *);
 	void (*Release)(void *);
    void (*SetAxisValue)(void *, u32);
+#ifdef WIN32
+   void (*MoveAxis)(void *, double, double);
+#else
    void (*MoveAxis)(void *, s32, s32);
+#endif
 } PerBaseConfig_struct;
 
 typedef struct {
@@ -85,7 +99,11 @@ static PerIO_struct IOalloc[ioPortMAX][8];
 
 #define PERCB(func) ((void (*) (void *)) func)
 #define PERVALCB(func) ((void (*) (void *, u32)) func)
+#ifdef WIN32
+#define PERMOVECB(func) ((void (*) (void *, double, double)) func)
+#else
 #define PERMOVECB(func) ((void (*) (void *, s32, s32)) func)
+#endif
 
 PerBaseConfig_struct perpadbaseconfig[] = {
 	{ PERPAD_UP, PERCB(PerPadUpPressed), PERCB(PerPadUpReleased), NULL, NULL },
@@ -210,8 +228,9 @@ u8 FASTCALL IOPortReadByte(SH2_struct *context, UNUSED u8* memory,  u32 addr)
     0x001d MODE (bit 7 - set PORT-G to counter-mode, bits 0-5 - RS422 satellite mode and node#)  <Technical Bowling>
     0x001f PORT-AD (8ch, write: bits 0-2 - set channel, read: channel data with autoinc channel number)
 */
-   addr = addr&0x1F;
    u8 val = 0x0;
+   addr = addr&0x1F;
+
    switch(addr) {
      case 0x01: val = IOPORT[PORT_A]; break; // P1
      case 0x03: val = IOPORT[PORT_B]; break; // P2
@@ -901,11 +920,30 @@ void PerMouseStartReleased(PerMouse_struct * mouse) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef WIN32
+void PerMouseMove(PerMouse_struct * mouse, double ratiox, double ratioy)
+#else
 void PerMouseMove(PerMouse_struct * mouse, s32 dispx, s32 dispy)
+#endif
 {
-   int negx, negy, overflowx, overflowy;
+#ifdef WIN32
+   s32 dispx, dispy;
+#else
    u8 diffx, diffy;
+#endif
+   int negx, negy, overflowx, overflowy;
 
+#ifdef WIN32
+   dispx = (s32) per_round((ratiox - 0.5) * 0xFF);
+   dispy = (s32) per_round((ratioy - 0.5) * 0xFF);
+   overflowx = ((mouse->mousebits[0] >> 6) & 1);
+   overflowy = ((mouse->mousebits[0] >> 7) & 1);
+   negx = dispx < 0 ? 1 : 0;
+   negy = dispy < 0 ? 1 : 0;
+
+   mouse->mousebits[1] = dispx & 0xFF;
+   mouse->mousebits[2] = dispy & 0xFF;
+# else
    negx = ((mouse->mousebits[0] >> 4) & 1);
    negy = ((mouse->mousebits[0] >> 5) & 1);
    overflowx = ((mouse->mousebits[0] >> 6) & 1);
@@ -969,12 +1007,13 @@ void PerMouseMove(PerMouse_struct * mouse, s32 dispx, s32 dispy)
          }
       }
    }
-
-   mouse->mousebits[0] = (overflowy << 7) | (overflowx << 6) | (negy << 5) | (negx << 4) | (mouse->mousebits[0] & 0x0F);
    if (negx) mouse->mousebits[1] = ~(diffx);
    else mouse->mousebits[1] = diffx;
    if (negy) mouse->mousebits[2] = ~(diffy);
    else mouse->mousebits[2] = diffy;
+#endif
+
+   mouse->mousebits[0] = (overflowy << 7) | (overflowx << 6) | (negy << 5) | (negx << 4) | (mouse->mousebits[0] & 0x0F);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1092,6 +1131,8 @@ void PerAxis7Value(PerAnalog_struct * analog, u32 val)
 
 void PerGunTriggerPressed(PerGun_struct * gun)
 {
+	printf("Gun trigger pressed\n");
+	fflush(stdout);
    *(gun->gunbits) &= 0xEF;
 }
 
@@ -1099,6 +1140,8 @@ void PerGunTriggerPressed(PerGun_struct * gun)
 
 void PerGunTriggerReleased(PerGun_struct * gun)
 {
+	printf("Gun trigger released\n");
+	fflush(stdout);
    *(gun->gunbits) |= 0x10;
 }
 
@@ -1118,22 +1161,41 @@ void PerGunStartReleased(PerGun_struct * gun)
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef WIN32
+void PerGunMove(PerGun_struct * gun, double ratiox, double ratioy)
+#else
 void PerGunMove(PerGun_struct * gun, s32 dispx, s32 dispy)
+#endif
 {
-   int x, y;
+   // Note -- UIYabause::mouseMoveEvent calls PerAxisMove which controls PerGunMove and PerMouseMove
+   // How to get Raw input in Qt: https://stackoverflow.com/questions/37071142/get-raw-mouse-movement-in-qt
+   int x, y, h, w, i; // X, Y, Height, Width, Interlace
+
+   //VIDCore->GetGlSize(&w, &h);
+   VIDCore->GetNativeResolution(&w, &h, &i);
+
+#ifdef WIN32
+   x = (int) per_round(ratiox * w);
+   y = (int) per_round(ratioy * h);
+
+   printf("Gun cursor [%f, %f] : %d / %d , %d / % d (%d) \n", ratiox, ratioy, x, w, y, h, i);
+   fflush(stdout);
+
+#else
    x = (*(gun->gunbits+1) << 8) +  *(gun->gunbits+2) + (dispx / 4);
    y = (*(gun->gunbits+3) << 8) +  *(gun->gunbits+4) - (dispy / 4);
 
    if (x < 0)
       x = 0;
-   else if (x >= 320) // fix me
-      x = 319;
+   else if (x >= w) // fix me
+      x = w;
 
    if (y < 0)
       y = 0;
-   else if (y >= 224) // fix me
-      y = 223;
-
+   else if (y >= h) // fix me
+      y = h;
+#endif
+   
    *(gun->gunbits+1) = x >> 8;
    *(gun->gunbits+2) = x;
    *(gun->gunbits+3) = y >> 8;
@@ -1393,7 +1455,11 @@ void PerAxisValue(u32 key, u8 val)
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef WIN32
+void PerAxisMove(u32 key, double dispx, double dispy)
+#else
 void PerAxisMove(u32 key, s32 dispx, s32 dispy)
+#endif
 {
    unsigned int i = 0;
 
@@ -1435,10 +1501,11 @@ void PerUpdateConfig(PerBaseConfig_struct * baseconfig, int nelems, void * contr
 {
    u32 oldsize = perkeyconfigsize;
    u32 i, j;
+   PerConfig_struct *new_data;
 
    perkeyconfigsize += nelems;
 
-	 PerConfig_struct *new_data = (PerConfig_struct*)realloc(perkeyconfig, perkeyconfigsize * sizeof(PerConfig_struct));
+	 new_data = (PerConfig_struct*)realloc(perkeyconfig, perkeyconfigsize * sizeof(PerConfig_struct));
  	if (new_data == NULL)
  	{
 		YuiMsg("Peripheral realloc Error\n");

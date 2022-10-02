@@ -24,6 +24,9 @@
 */
 
 #ifdef HAVE_LIBSDL
+  #ifndef SDL_MAIN_HANDLED
+  #define SDL_MAIN_HANDLED
+  #endif
 #if defined(__APPLE__) || defined(GEKKO)
  #ifdef HAVE_LIBSDL2
   #include <SDL2/SDL.h>
@@ -79,7 +82,8 @@ const unsigned int SDL_HAT_VALUES_NUM = sizeof(SDL_HAT_VALUES) / sizeof(SDL_HAT_
 //////////////////////////////////////////////////////////////////////////////
 
 int PERSDLJoyInit(void) {
-	int i, j;
+	unsigned int i;
+	int j;
 
 	// does not need init if already done
 	if ( SDL_PERCORE_INITIALIZED )
@@ -107,6 +111,8 @@ YuiMsg("µSDL joy init\n");
 	for ( i = 0; i < SDL_PERCORE_JOYSTICKS_INITIALIZED; i++ )
 	{
 		SDL_Joystick* joy = SDL_JoystickOpen( i );
+		printf("SDL Joystick (%d): \"%s\"  [ %d axis, %d balls ]\n", i, SDL_JoystickName(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumBalls(joy));
+		fflush(stdout);
 
 		SDL_JoystickUpdate();
 
@@ -135,10 +141,10 @@ YuiMsg("µSDL joy init\n");
 //////////////////////////////////////////////////////////////////////////////
 
 void PERSDLJoyDeInit(void) {
+	u32 i;
 	// close joysticks
 	if ( SDL_PERCORE_INITIALIZED == 1 )
 	{
-		int i;
 		for ( i = 0; i < SDL_PERCORE_JOYSTICKS_INITIALIZED; i++ )
 		{
 #if SDL_VERSION_ATLEAST(2,0,0)
@@ -166,9 +172,9 @@ void PERSDLJoyDeInit(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 int PERSDLJoyHandleEvents(void) {
-	int joyId;
+	unsigned int joyId;
 	int i;
-	int j;
+	unsigned int j;
 	SDL_Joystick* joy;
 	Sint16 cur;
 	Uint8 buttonState;
@@ -265,7 +271,7 @@ int PERSDLJoyHandleEvents(void) {
 
 u32 PERSDLJoyScan( u32 flags ) {
 	// init vars
-	int joyId;
+	unsigned int joyId;
 	int i;
 	SDL_Joystick* joy;
 	Sint16 cur;

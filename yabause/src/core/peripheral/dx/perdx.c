@@ -41,7 +41,17 @@
 #include "yui.h"
 #include "movie.h"
 #include "error.h"
+#if !_MSC_VER || __INTEL_COMPILER
 #include <stdbool.h>
+#else
+#define _bool int
+#define _true 1
+#define _false 0
+
+#define bool _bool
+#define true _true
+#define false _false
+#endif
 //#include "dx.h"
 
 enum {
@@ -324,11 +334,13 @@ int SetupDevices();
 
 LRESULT SubWndProc(int code, WPARAM wParam, LPARAM lParam)
 {
+	PCWPSTRUCT pMsg;
+
 	// invalid code skip
 	if (code < 0) return CallNextHookEx(NULL, code, wParam, lParam);
 
 	// check if device was added/removed
-	PCWPSTRUCT pMsg = (PCWPSTRUCT)(lParam);
+	pMsg = (PCWPSTRUCT)(lParam);
 	if (pMsg->message == WM_DEVICECHANGE)
 	{
 		switch (pMsg->wParam)
@@ -355,6 +367,9 @@ LRESULT SubWndProc(int code, WPARAM wParam, LPARAM lParam)
 
 int PERDXInit(void)
 {
+#if __cplusplus <= 199711L
+	int /*const*/ err;
+#endif
 	char tempstr[512];
 	HRESULT ret;
 
@@ -369,13 +384,18 @@ int PERDXInit(void)
 		return -1;
 	}
 
+#if __cplusplus <= 199711L
+	err = SetupDevices();
+#else
 	int const err = SetupDevices();
+#endif
 	if(err != 0)
 	{
 		return err;
 	}
 
-	SetWindowsHookExW(WH_CALLWNDPROC, &SubWndProc, GetModuleHandleW(NULL), GetCurrentThreadId());
+	// SetWindowsHookExW(WH_CALLWNDPROC, &SubWndProc, GetModuleHandleW(NULL), GetCurrentThreadId());
+	SetWindowsHookExW(WH_CALLWNDPROC, (HOOKPROC) &SubWndProc, GetModuleHandleW(NULL), GetCurrentThreadId());
 
 	//LoadDefaultPort1A();
 	PERCORE_INITIALIZED = 1;
@@ -384,6 +404,7 @@ int PERDXInit(void)
 
 int SetupDevices()
 {
+	int i;
 	int user_index = 0;
 
 #ifdef HAVE_XINPUT
@@ -396,7 +417,7 @@ int SetupDevices()
 	CleanupForIsXInputDevice();
 #endif
 
-	for (int i = 0; i < num_devices; i++)
+	for (i = 0; i < num_devices; i++)
 	{
 		if (!dev_list[i].is_xinput_device)
 		{
@@ -489,6 +510,7 @@ void PollKeys(void)
 	u32 i, j;
 	DWORD size=8;
 	HRESULT hr;
+	LONG LVal, RVal;
 
 	for (i = 0; i < num_devices; i++)
 	{
@@ -563,9 +585,9 @@ void PollKeys(void)
 		DX_PerAxisValue(i, 0x3FFF, XI_THUMBLY, (u8)((js.lY) >> 8));
 		DX_PerAxisValue(i, 0x3FFF, XI_THUMBRX, (u8)((js.lRx) >> 8));
 		DX_PerAxisValue(i, 0x3FFF, XI_THUMBRY, (u8)((js.lRy) >> 8));
-    LONG RVal = MAX(MIN( 0x7FFF - js.lZ,0x7FFF),0);
+    RVal = MAX(MIN( 0x7FFF - js.lZ,0x7FFF),0);
     DX_PerAxisValue(i, 0x3FFF, XI_TRIGGERR, (u8)(RVal >> 8));
-    LONG LVal = MAX(MIN(js.lZ- 0x7FFF,0x7FFF),0);
+    LVal = MAX(MIN(js.lZ- 0x7FFF,0x7FFF),0);
     DX_PerAxisValue(i, 0x3FFF, XI_TRIGGERL, (u8)(LVal >> 8));
 
 		// Left Stick
@@ -690,6 +712,7 @@ u32 PERDXScan(u32 flags)
 {
 	int i, j;
 	HRESULT hr;
+	LONG LVal, RVal;
 
 	for (i = 0; i < num_devices; i++)
 	{
@@ -837,13 +860,13 @@ u32 PERDXScan(u32 flags)
       }
 
       if (js.lZ != 0) {
-        LONG RVal = MAX(MIN( 0x7FFF - js.lZ,0x7FFF),0);
+        RVal = MAX(MIN( 0x7FFF - js.lZ,0x7FFF),0);
         if ((scan = ScanXInputTrigger(i, RVal, 0x3FFF, 0, XI_TRIGGERR)) != 0) {
           // Right detected
           return scan;
         }
 
-        LONG LVal = MAX(MIN(js.lZ- 0x7FFF,0x7FFF),0);
+        LVal = MAX(MIN(js.lZ- 0x7FFF,0x7FFF),0);
         if ((scan = ScanXInputTrigger(i, LVal, 0x3FFF, 0, XI_TRIGGERL)) != 0) {
           // Right detected
           return scan;
@@ -885,13 +908,13 @@ u32 PERDXScan(u32 flags)
       }
 
       if (js.lZ != 0) {
-        LONG RVal = MAX(MIN( 0x7FFF - js.lZ,0x7FFF),0);
+        RVal = MAX(MIN( 0x7FFF - js.lZ,0x7FFF),0);
         if ((scan = ScanXInputTrigger(i, RVal, 0x3FFF, 0, XI_TRIGGERR)) != 0) {
           // Right detected
           return scan;
         }
 
-        LONG LVal = MAX(MIN(js.lZ- 0x7FFF,0x7FFF),0);
+        LVal = MAX(MIN(js.lZ- 0x7FFF,0x7FFF),0);
         if ((scan = ScanXInputTrigger(i, LVal, 0x3FFF, 0, XI_TRIGGERL)) != 0) {
           // Right detected
           return scan;

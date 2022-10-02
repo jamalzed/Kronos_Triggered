@@ -16,6 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+    
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 
 #ifndef PERIPHERAL_H
@@ -125,7 +131,11 @@ void PerKeyDown(u32 key);
 void PerKeyUp(u32 key);
 void PerSetKey(u32 key, u8 name, void * controller);
 void PerAxisValue(u32 key, u8 val);
+#ifdef WIN32
+void PerAxisMove(u32 key, double dispx, double dispy);
+#else
 void PerAxisMove(u32 key, s32 dispx, s32 dispy);
+#endif
 
 /** @defgroup pad Pad
  *
@@ -259,6 +269,9 @@ extern const char * PerMouseNames[5];
 typedef struct
 {
    u8 perid;
+   // mousebits[0] =  OverY OverX NegY NegX StBtn RtBtn MidBtn LtBtn
+   // mousebits[1] = X co-ord (+/- depending on NegX)
+   // mousebits[2] = Y co-ord (+/- depending on NegY)
    u8 mousebits[3];
 } PerMouse_struct;
 
@@ -281,7 +294,11 @@ void PerMouseRightReleased(PerMouse_struct * mouse);
 void PerMouseStartPressed(PerMouse_struct * mouse);
 void PerMouseStartReleased(PerMouse_struct * mouse);
 
+#ifdef WIN32
+void PerMouseMove(PerMouse_struct * mouse, double ratiox, double ratioy);
+#else
 void PerMouseMove(PerMouse_struct * mouse, s32 dispx, s32 dispy);
+#endif
 /** @} */
 
 /** @defgroup 3danalog 3DAnalog
@@ -353,7 +370,11 @@ void PerGunTriggerReleased(PerGun_struct * gun);
 void PerGunStartPressed(PerGun_struct * gun);
 void PerGunStartReleased(PerGun_struct * gun);
 
+#ifdef WIN32
+void PerGunMove(PerGun_struct * gun, double ratiox, double ratioy);
+#else
 void PerGunMove(PerGun_struct * gun, s32 dispx, s32 dispy);
+#endif
 
 
 #define PERJAMMA_COIN1 29
