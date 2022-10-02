@@ -49,7 +49,11 @@ mini18n_list_t * mini18n_list_add(mini18n_list_t * list, const char * key, mini1
 		return list;
 	}
 
+#if _MSC_VER && !__INTEL_COMPILER
+	node->key = _strdup(key);
+#else
 	node->key = strdup(key);
+#endif
 	node->data = data;
 	node->value = node->data->dup(value);
 	node->next = list;

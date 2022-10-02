@@ -85,8 +85,8 @@ const char * mini18n_hash_value(mini18n_hash_t * hash, const char * key) {
 }
 
 unsigned int mini18n_hash_func(mini18n_hash_t * hash, const char * key) {
-	unsigned int i, s = 0;
-	int n = hash->data->len(key);
+	unsigned int s = 0;
+	int i, n = hash->data->len(key);
 
 	for(i = 0;i < n;i++) {
 		s+= key[i];

@@ -199,6 +199,8 @@ void ProfileDrawGraph(){
 	int i,j;
 int historyindx;
 float targetY = 500.0f;
+float startX = 0.0f;
+float width = 32.0f;
 
 if (current_history_index < MAX_HISTORY){
   current_history_index++;
@@ -210,9 +212,6 @@ historyindx = current_history_index % MAX_HISTORY;
 if (frameinfo_histroy[historyindx].cnt == 0){
   return;
 }
-
-float startX = 0.0f;
-float width = 32.0f;
 
 for (i = 0; i < MAX_HISTORY; i++){
 
@@ -270,6 +269,8 @@ void OSDNanovgDisplayMessage(OSDMessage_struct * message, pixel_t * buffer, int 
   float fontsize = 18.0f;
   int maxlen = 0;
   int i = 0;
+      int linecnt;
+      int start_point;
 
   if ((message->type != OSDMSG_FPS)&&(message->type != OSDMSG_VDP1_FPS)) return;
 
@@ -300,8 +301,8 @@ void OSDNanovgDisplayMessage(OSDMessage_struct * message, pixel_t * buffer, int 
       nvgText(vg, LeftX, TxtY, message->message, NULL);
       TxtY += fontsize;
 #if 1
-      int linecnt = (vidheight - TxtY) / fontsize;
-      int start_point = current_log_history_index - linecnt;
+      linecnt = (vidheight - TxtY) / fontsize;
+      start_point = current_log_history_index - linecnt;
       if (start_point < 0) {
           start_point = MAX_LOG_HISTORY + start_point;
       }

@@ -17,6 +17,10 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#if _MSC_VER && !__INTEL_COMPILER && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "mini18n.h"
 #include "mini18n-multi.h"
 #include <stdio.h>
@@ -122,21 +126,31 @@ int mini18n_load_system(mini18n_t lang, const char * folder) {
 	if (lang_s == NULL) return -1;
 
 	if (folder == NULL) {
+#if _MSC_VER && !__INTEL_COMPILER
+		locale = _strdup(lang_s);
+		fulllocale = _strdup(country);
+#else
 		locale = strdup(lang_s);
 		fulllocale = strdup(country);
+#endif
 	} else {
 		char * pos;
 		size_t n = strlen(folder);
 
 		if (n == 0) {
+#if _MSC_VER && !__INTEL_COMPILER
+			locale = _strdup(lang_s);
+			fulllocale = _strdup(country);
+#else
 			locale = strdup(lang_s);
 			fulllocale = strdup(country);
+#endif
 		} else {
 			size_t s;
 			int trailing = folder[n - 1] == pathsep ? 1 : 0;
 
 			s = n + strlen(lang_s) + 5 + (1 - trailing);
-			locale = malloc(s);
+			locale = (char*) malloc(s);
 
 			pos = locale;
 			pos += sprintf(pos, "%s", folder);
@@ -147,7 +161,7 @@ int mini18n_load_system(mini18n_t lang, const char * folder) {
 				fulllocale = NULL;
 			} else {
 				s = n + strlen(country) + 5 + (1 - trailing);
-				fulllocale = malloc(s);
+				fulllocale = (char*) malloc(s);
 
 				pos = fulllocale;
 				pos += sprintf(pos, "%s", folder);
