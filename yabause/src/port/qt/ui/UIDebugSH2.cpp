@@ -239,7 +239,12 @@ void UIDebugSH2::updateCodePage(u32 evaluateAddress)
     restoreAddr2line();
 
   QString elfPath;
-  const QString program{ addr2line };
+
+#if __cplusplus <= 199711L
+  const QString program = addr2line;
+#else
+  const QString program { addr2line };
+#endif
 
   VolatileSettings *vs = QtYabause::volatileSettings();
 	if ( vs->value( "General/CdRom" ) != CDCORE_ISO )
@@ -249,8 +254,13 @@ void UIDebugSH2::updateCodePage(u32 evaluateAddress)
   }
   else
   {
+#if __cplusplus <= 199711L
+    const QString isoPathString = vs->value( "General/CdRomISO" ).toString();
+    const QFileInfo fileInfo = isoPathString;
+#else
     const QString isoPathString{ vs->value( "General/CdRomISO" ).toString() };
     const QFileInfo fileInfo(isoPathString);
+#endif
     QDir searchPath = fileInfo.dir();
     const QString filename = fileInfo.completeBaseName() + ".elf";
 
@@ -299,8 +309,14 @@ void UIDebugSH2::updateCodePage(u32 evaluateAddress)
   const QByteArray pstdout = addr2lineProgram.readAllStandardOutput();
   if (addr2lineProgram.exitCode() != 0) {
     const QByteArray pstderr = addr2lineProgram.readAllStandardError();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
     const std::string outputString =
         pstdout.toStdString() + " / " + pstderr.toStdString();
+#else
+	const std::string pstdout_str(pstdout.constData(), pstdout.length());
+	const std::string pstderr_str(pstderr.constData(), pstderr.length());
+    const std::string outputString = pstdout_str + " / " + pstderr_str;
+#endif
 
     YuiMsg("Cmd: %s\n",
                 commandString.c_str());

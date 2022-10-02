@@ -16,6 +16,12 @@
         You should have received a copy of the GNU General Public License
         along with Yabause; if not, write to the Free Software
         Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 #include "UIPadSetting.h"
 #include "UIPortManager.h"
@@ -32,6 +38,9 @@
 UIControllerSetting::UIControllerSetting( PerInterface_struct* core, uint port, uint pad, uint perType, QWidget* parent )
 	: QDialog( parent )
 {
+#if defined(MULTI_MOUSE) && defined(WIN32)
+	RAWINPUTDEVICE device;
+#endif
 	Q_ASSERT( core );
 	
 	mCore = core;
@@ -45,6 +54,25 @@ UIControllerSetting::UIControllerSetting( PerInterface_struct* core, uint port, 
 	mlInfos = NULL;
 	scanFlags = PERSF_ALL;
 	QtYabause::retranslateWidget( this );
+#if defined(MULTI_MOUSE) && defined(WIN32)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+	// (Untested code): connect winEvent to the window (Qt 5.0+ uses nativeEvent, Qt < 5.0 uses winEvent)
+	connect( this, SIGNAL(eventData(const QString &)), this, SLOT(handleEventData(const QString &)));
+#endif
+	// Register the Raw input mouse handler
+	device.usUsagePage = 0x01;
+	device.usUsage = 0x02;
+	device.dwFlags = 0;
+	device.hwndTarget = (HWND) winId();
+	if (RegisterRawInputDevices(&device, 1, sizeof device) == FALSE) {
+		//registration failed. 
+		printf("RawInput init failed:\n");
+		fflush(stdout);
+	} else {
+		printf("RawInput init success!\n");
+		fflush(stdout);
+	}
+#endif
 }
 
 UIControllerSetting::~UIControllerSetting()
@@ -116,23 +144,31 @@ void UIControllerSetting::keyPressEvent( QKeyEvent* e )
 
 void UIControllerSetting::mouseMoveEvent( QMouseEvent * e )
 {
+#if defined(MULTI_MOUSE) && defined(WIN32)
+	if ( ! mTimer->isActive() )
+#else
 	if ( mTimer->isActive() )
 	{
 		if (scanFlags & PERSF_MOUSEMOVE)
 			setPadKey((1 << 30));
 	}
 	else
+#endif
 		QWidget::mouseMoveEvent( e );
 }
 
 void UIControllerSetting::mousePressEvent( QMouseEvent * e )
 {
+#if defined(MULTI_MOUSE) && defined(WIN32)
+	if ( ! mTimer->isActive() )
+#else
 	if ( mTimer->isActive() )
 	{
 		if (scanFlags & PERSF_BUTTON)
 			setPadKey( (1 << 31) | e->button() );
 	}
 	else
+#endif
 		QWidget::mousePressEvent( e );
 }
 
@@ -153,6 +189,8 @@ void UIControllerSetting::setPadKey( u32 key )
 	mTimer->stop();
 	if (curTb)
 	   curTb->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+	printf("key set - %x", key);
+	fflush(stdout);
 }
 
 void UIControllerSetting::loadPadSettings()
@@ -241,3 +279,61 @@ void UIControllerSetting::timer_timeout()
 		setPadKey( key );
 	}
 }
+
+// https://stackoverflow.com/questions/37071142/get-raw-mouse-movement-in-qt
+// https://stackoverflow.com/questions/1755196/receive-wm-copydata-messages-in-a-qt-app
+// https://docs.microsoft.com/en-us/windows/win32/dxtecharts/taking-advantage-of-high-dpi-mouse-movement?redirectedfrom=MSDN#directinput
+#if defined(MULTI_MOUSE) && defined(WIN32)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+bool UIControllerSetting::nativeEvent(const QByteArray &eventType, void *msg, long *result) {
+	MSG *message = static_cast<MSG*>(msg);
+#else
+bool UIControllerSetting::winEvent(MSG *message, long *result) {
+#endif
+	LPBYTE lpb;// = new BYTE[dwSize];//LPBYTE lpb = new BYTE[dwSize];
+	UINT dwSize;
+	RAWINPUT *raw;
+
+	if( mTimer->isActive() ) {
+		if (message->message == WM_INPUT ) {
+			printf("set_key");
+			fflush(stdout);
+			GetRawInputData((HRAWINPUT)message->lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+			lpb = (LPBYTE) malloc(sizeof(LPBYTE) * dwSize);
+			if (lpb == NULL) {
+				return false;
+			} 
+		
+			if (GetRawInputData((HRAWINPUT)message->lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize ) {
+				OutputDebugString (TEXT("GetRawInputData doesn't return correct size !\n"));
+			}
+
+			raw = (RAWINPUT*)lpb;
+
+			if (raw->header.dwType == RIM_TYPEMOUSE) {
+				u32 mouse_id = (1 << 31) | (((DWORD)raw->header.hDevice) << 5);
+
+				// Handle the mouse buttons
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_1_DOWN)
+					setPadKey(mouse_id | 1 );
+				else if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_2_DOWN)
+					setPadKey( mouse_id | 2 );
+				else if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_3_DOWN)
+					setPadKey( mouse_id | 3 );
+				else if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_4_DOWN)
+					setPadKey( mouse_id | 4 );
+				else if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_5_DOWN)
+					setPadKey( mouse_id | 5 );
+				else if (scanFlags & PERSF_MOUSEMOVE)
+					setPadKey( mouse_id | 6 );
+
+				return true;
+			} 
+			free(lpb); 
+			printf("\n");
+			fflush(stdout);
+		}
+	}
+	return false;
+}
+#endif

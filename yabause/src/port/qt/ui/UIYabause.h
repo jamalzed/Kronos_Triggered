@@ -17,14 +17,27 @@
 	You should have received a copy of the GNU General Public License
 	along with Yabause; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 #ifndef UIYABAUSE_H
 #define UIYABAUSE_H
 
-#include "ui_UIYabause.h"
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include "../YabauseThread.h"
 #include "UICheatSearch.h"
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include "ui_UIYabause_new.h"
+#else
+#include "ui_UIYabause_old.h"
+#endif
 
 class YabauseGL;
 class QTextEdit;
@@ -88,6 +101,7 @@ protected:
 
 	float mouseXRatio, mouseYRatio;
 	int mouseSensitivity;
+	bool emulateGun;
 	bool emulateMouse;
 	int showMenuBarHeight;
 	QTimer* hideMouseTimer;
@@ -104,6 +118,17 @@ protected:
 	virtual void resizeEvent( QResizeEvent* event );
 	virtual void dragEnterEvent(QDragEnterEvent* e) override;
 	virtual void dropEvent(QDropEvent* e) override;
+#ifdef WIN32
+	virtual void clip_cursor();
+#ifdef MULTI_MOUSE
+	virtual void initRawInput();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+	virtual bool nativeEvent(const QByteArray &eventType, void *msg, long *result) override;
+#else
+	virtual bool winEvent(MSG *message, long *result) override;
+#endif
+#endif
+#endif
 	bool mIsCdIn;
 
 public slots:
@@ -111,6 +136,7 @@ public slots:
 	void reset();
 	void hideMouse();
 	void cursorRestore();
+	void toggleEmulateGun( bool enable );
 	void toggleEmulateMouse( bool enable );
 
 	void breakpointHandlerMSH2(bool displayMessage);
@@ -121,6 +147,7 @@ public slots:
 protected slots:
 	void errorReceived( const QString& error, bool internal = true );
 	void sizeRequested( const QSize& size );
+	void fixAspectRatio( int width, int height  );
 	void toggleFullscreen( int width, int height, bool f, int videoFormat );
 	void fullscreenRequested( bool fullscreen );
 	void refreshStatesActions();

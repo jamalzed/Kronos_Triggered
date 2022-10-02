@@ -17,7 +17,16 @@
 	You should have received a copy of the GNU General Public License
 	along with Yabause; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include "UIYabause.h"
 #include "../Settings.h"
 #include "../VolatileSettings.h"
@@ -85,12 +94,19 @@ UIYabause::UIYabause( QWidget* parent )
 	// create glcontext
 	mYabauseGL = new YabauseGL( );
 	// and set it as central application widget
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 	QWidget *container = QWidget::createWindowContainer(mYabauseGL, this);
 	container->setFocusPolicy( Qt::StrongFocus );
 	setFocusPolicy( Qt::StrongFocus );
 	container->setFocusProxy( this );
 	container->setAcceptDrops(false);
 	container->installEventFilter( this );
+#else
+	setFocusPolicy( Qt::StrongFocus );
+	setFocusProxy( this );
+	setAcceptDrops(false);
+	installEventFilter( this );
+#endif
 	mYabauseGL->installEventFilter( this );
 
 	this->setAcceptDrops(true);
@@ -103,7 +119,11 @@ UIYabause::UIYabause( QWidget* parent )
 			aEmulationRun->trigger();
 	});
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 	setCentralWidget( container );
+#else
+	setCentralWidget( mYabauseGL );
+#endif
 	oldMouseX = oldMouseY = 0;
 	mouseCaptured = false;
 
@@ -122,7 +142,12 @@ UIYabause::UIYabause( QWidget* parent )
 	connect( mYabauseThread, SIGNAL( reset() ), this, SLOT( reset() ) );
 	connect( hideMouseTimer, SIGNAL( timeout() ), this, SLOT( hideMouse() ));
 	connect( mouseCursorTimer, SIGNAL( timeout() ), this, SLOT( cursorRestore() ));
+	connect( mYabauseThread, SIGNAL( toggleEmulateGun( bool ) ), this, SLOT( toggleEmulateGun( bool ) ) );
 	connect( mYabauseThread, SIGNAL( toggleEmulateMouse( bool ) ), this, SLOT( toggleEmulateMouse( bool ) ) );
+#if defined(MULTI_MOUSE) && defined(WIN32) && QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+	// (Untested code): connect winEvent to the window (Qt 5.0+ uses nativeEvent, Qt < 5.0 uses winEvent)
+	connect( this, SIGNAL(eventData(const QString &)), this, SLOT(handleEventData(const QString &)));
+#endif
 
 	// Load shortcuts
 	VolatileSettings* vs = QtYabause::volatileSettings();
@@ -147,9 +172,14 @@ UIYabause::UIYabause( QWidget* parent )
 	}
 
 	restoreGeometry( vs->value("General/Geometry" ).toByteArray() );
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 	container->setMouseTracking(true);
+#else
+	setMouseTracking(true);
+#endif
 	setMouseTracking(true);
 	mouseXRatio = mouseYRatio = 1.0;
+	emulateGun = false;
 	emulateMouse = false;
 	mouseSensitivity = vs->value( "Input/GunMouseSensitivity", 100 ).toInt();
 	showMenuBarHeight = menubar->height();
@@ -162,6 +192,9 @@ UIYabause::UIYabause( QWidget* parent )
 
 UIYabause::~UIYabause()
 {
+#if defined(MULTI_MOUSE) && defined(WIN32)
+	//free(pRawInputDeviceList);
+#endif
 }
 
 void UIYabause::showEvent( QShowEvent* e )
@@ -198,9 +231,12 @@ void UIYabause::closeEvent( QCloseEvent* e )
 
 void UIYabause::keyPressEvent( QKeyEvent* e )
 {
-	if (emulateMouse && mouseCaptured && e->key() == Qt::Key_Escape) {
+	if ((emulateGun || emulateMouse) && mouseCaptured && e->key() == Qt::Key_Escape) {
 		mouseCaptured = false;
 		this->setCursor(Qt::ArrowCursor);
+#ifdef WIN32
+		ClipCursor(NULL);
+#endif
 	}
 	else
 		PerKeyDown( e->key() );
@@ -211,32 +247,45 @@ void UIYabause::keyReleaseEvent( QKeyEvent* e )
 
 void UIYabause::leaveEvent( QEvent* e )
 {
-	if (emulateMouse && mouseCaptured)
+	if ((emulateMouse || emulateGun) && mouseCaptured)
 	{
+#ifdef WIN32
+		clip_cursor();
+#else
 		// lock cursor to center
-		int midX = (centralWidget()->size().width()/2); // widget global x
-		int midY = centralWidget()->size().height()/2; // widget global y
+		int midX = geometry().x()+(width()/2); // widget global x
+		int midY = geometry().y()+menubar->height()+toolBar->height()+(height()/2); // widget global y
 
-		QPoint newPos(geometry().x() + centralWidget()->geometry().x() + midX, geometry().y() + centralWidget()->geometry().y() + midY);
+		QPoint newPos(midX, midY);
 		this->cursor().setPos(newPos);
+#endif
 	}
 }
 
 void UIYabause::mousePressEvent( QMouseEvent* e )
 {
-	if (emulateMouse && !mouseCaptured)
+	if ((emulateMouse || emulateGun) && !mouseCaptured)
 	{
+#ifdef WIN32
+		clip_cursor();
+#else
 		this->setCursor(Qt::BlankCursor);
+#endif
 		mouseCaptured = true;
-		mYabauseGL->getScale(&mouseXRatio, &mouseYRatio);
 	}
+#if !defined(MULTI_MOUSE)
 	else
+	{
 		PerKeyDown( (1 << 31) | e->button() );
+	}
+#endif
 }
 
 void UIYabause::mouseReleaseEvent( QMouseEvent* e )
 {
+#if !defined(MULTI_MOUSE)
 	PerKeyUp( (1 << 31) | e->button() );
+#endif
 }
 
 void UIYabause::hideMouse()
@@ -253,43 +302,67 @@ void UIYabause::cursorRestore()
 
 void UIYabause::mouseMoveEvent( QMouseEvent* e )
 {
-	int midX = (centralWidget()->size().width()/2); // widget global x
-	int midY = centralWidget()->size().height()/2; // widget global y
+#if defined(MULTI_MOUSE) && defined(WIN32)
+#elif defined(WIN32)
+	double x = (((double)e->x() /* - geometry().x() */) / mYabauseGL->width());
+	double y = (((double)e->y() /* - geometry().y() */) / mYabauseGL->height());
 
-	int x = (e->x()-midX);
-	int y = (midY-e->y());
-
-	if (mouseCaptured) {
-		//use mouseSensitivity and scale ratio
-		x *= (float)mouseSensitivity/100.0;
-		y *= (float)mouseSensitivity/100.0;
-		x /= mouseXRatio;
-		y /= mouseYRatio;
-
+	if (mouseCaptured)
 		PerAxisMove((1 << 30), x, y);
-	}
+#else
+	int midX = geometry().x()+(width()/2); // widget global x
+	int midY = geometry().y()+menubar->height()+toolBar->height()+(height()/2); // widget global y
+
+	int minAdj = mouseSensitivity/100;
+
+	int x = (e->x()-(width()/2))*mouseXRatio;
+	int y = (height()/2) - e->y();
+
+	// Seems this was causing the problem before with Lightgun support
+	// y+= menubar->height()+toolBar->height();
+	y *= mouseYRatio;
+
+	// If minimum movement is less than x, wait until next pass to apply
+	if (abs(x) < minAdj) x = 0;
+	if (abs(y) < minAdj) y = 0;
+
+	//printf("Mouse move (%d, %d) : y = (%d + %d + (%d / 2) + %d) * %f--> %d\n", e->x(), e->y(), menubar->height(), toolBar->height(), height(), e->y(), mouseYRatio, y);
+    //fflush(stdout);
+
+	// Need to recalculate as Y co-ordinate/displacement appears incorrect!
+	if (mouseCaptured)
+		PerAxisMove((1 << 30), x, y);
+#endif
 
 	VolatileSettings* vs = QtYabause::volatileSettings();
 
 	if (!isFullScreen())
 	{
-		if (emulateMouse && mouseCaptured)
+		if ((emulateMouse || emulateGun) && mouseCaptured)
 		{
+#ifdef WIN32
+			clip_cursor();
+#else
 			// lock cursor to center
-			QPoint newPos(geometry().x() + centralWidget()->geometry().x() + midX, geometry().y() + centralWidget()->geometry().y() + midY);
+			QPoint newPos(midX, midY);
 			this->cursor().setPos(newPos);
+#endif
 			this->setCursor(Qt::BlankCursor);
 			return;
 		}
 		else
+		{
+			ClipCursor(NULL);
 			this->setCursor(Qt::ArrowCursor);
+		}
 	}
 	else
 	{
-		if (emulateMouse && mouseCaptured)
+		if ((emulateMouse || emulateGun) && mouseCaptured)
 		{
-			QPoint newPos(geometry().x() + centralWidget()->geometry().x() + midX, geometry().y() + centralWidget()->geometry().y() + midY);
-			this->cursor().setPos(newPos);
+#ifdef WIN32
+			clip_cursor();
+#endif
 			this->setCursor(Qt::BlankCursor);
 			return;
 		}
@@ -308,6 +381,10 @@ void UIYabause::mouseMoveEvent( QMouseEvent* e )
 
 void UIYabause::resizeEvent( QResizeEvent* event )
 {
+
+    //	if (event->oldSize().width() != event->size().width())
+    //fixAspectRatio(event->size().width(), event->size().height());
+
 	QMainWindow::resizeEvent( event );
 }
 
@@ -379,6 +456,9 @@ void UIYabause::sizeRequested( const QSize& s )
 		height=s.height();
 	}
 
+	mouseXRatio = 320.0 / (float)width * 2.0 * (float)mouseSensitivity / 100.0;
+	mouseYRatio = 240.0 / (float)height * 2.0 * (float)mouseSensitivity / 100.0;
+
 	// Compensate for menubar and toolbar
 	VolatileSettings* vs = QtYabause::volatileSettings();
 	if (vs->value( "View/Menubar" ).toInt() != BD_ALWAYSHIDE)
@@ -387,6 +467,33 @@ void UIYabause::sizeRequested( const QSize& s )
 		height += toolBar->height();
 
 	resize( width, height );
+}
+
+void UIYabause::fixAspectRatio( int width , int height )
+{
+	int aspectRatio = QtYabause::volatileSettings()->value( "Video/AspectRatio").toInt();
+
+      if (this->isFullScreen()) {
+        mYabauseGL->resize(width, height);
+      }
+      else{
+        int heightOffset = toolBar->height()+menubar->height();
+        switch(aspectRatio) {
+          case 0:
+            height = 3 * ((float) width / 4);
+            adjustHeight(height );
+            setFixedHeight(height);
+            break;
+          case 2:
+            height = 9 * ((float) width / 16);
+            adjustHeight(height );
+            setFixedHeight(height);
+            break;
+          default:
+            break;
+        }
+        mouseYRatio = 240.0 / (float)height * 2.0 * (float)mouseSensitivity / 100.0;
+      }
 }
 
 void UIYabause::toggleFullscreen( int width, int height, bool f, int videoFormat )
@@ -721,7 +828,11 @@ void UIYabause::on_aFileScreenshot_triggered()
 	QFileInfo const fileInfo(QtYabause::volatileSettings()->value("General/CdRomISO").toString());
 
 	// take screenshot of gl view
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 	QImage const screenshot = mYabauseGL->grabFramebuffer();
+#else
+	QImage const screenshot = mYabauseGL->grabFrameBuffer();
+#endif
 
 	auto const directory = QtYabause::volatileSettings()->value(QtYabause::SettingKeys::ScreenshotsDirectory, QtYabause::DefaultPaths::Screenshots()).toString();
 	auto const format = QtYabause::volatileSettings()->value(QtYabause::SettingKeys::ScreenshotsFormat, "png").toString();
@@ -1036,6 +1147,11 @@ void UIYabause::reset()
 	mYabauseGL->updateView();
 }
 
+void UIYabause::toggleEmulateGun( bool enable )
+{
+	emulateGun = enable;
+}
+
 void UIYabause::toggleEmulateMouse( bool enable )
 {
 	emulateMouse = enable;
@@ -1083,3 +1199,139 @@ void UIYabause::dropEvent(QDropEvent* e)
 		loadGameFromFile(fileName);
 	}
 }
+
+
+#ifdef WIN32
+void UIYabause::clip_cursor() {
+	int x = mYabauseGL->x() + geometry().x(),
+		y = mYabauseGL->y() + geometry().y() /*+ menubar->height() + toolBar->height()*/,
+		w = mYabauseGL->width(),
+		h = mYabauseGL->height();
+
+	/*printf("yabGL (%d, %d, %d, %d) vs. geo (%d, %d, %d, %d)\n\t vs. window (%d, %d, %d, %d) vs window geo (%d, %d, %d, %d)\n\t vs. frame geo (%d, %d, %d, %d)",
+		mYabauseGL->x(), mYabauseGL->y(), mYabauseGL->width(), mYabauseGL->height(),
+		mYabauseGL->frameGeometry().x(), mYabauseGL->frameGeometry().y(), mYabauseGL->frameGeometry().width(), mYabauseGL->frameGeometry().height(),
+		this->x(), this->y(), this->width(), this->height(),
+		this->geometry().x(), this->geometry().y(), this->geometry().width(), this->geometry().height(),
+		this->frameGeometry().x(), this->frameGeometry().y(), this->frameGeometry().width(), this->frameGeometry().height()
+		);*/
+
+	RECT clip = {x, y, x + w, y+ h};
+		
+	ClipCursor(&clip);
+}
+
+// https://stackoverflow.com/questions/37071142/get-raw-mouse-movement-in-qt
+// https://stackoverflow.com/questions/1755196/receive-wm-copydata-messages-in-a-qt-app
+// https://docs.microsoft.com/en-us/windows/win32/dxtecharts/taking-advantage-of-high-dpi-mouse-movement?redirectedfrom=MSDN#directinput
+#ifdef MULTI_MOUSE
+void UIYabause::initRawInput() {
+	RAWINPUTDEVICE device;
+	// Register the Raw input mouse handler
+	device.usUsagePage = 0x01;
+	device.usUsage = 0x02;
+	device.dwFlags = 0;
+	device.hwndTarget = (HWND) winId();
+	if (RegisterRawInputDevices(&device, 1, sizeof device) == FALSE) {
+		//registration failed. 
+		printf("RawInput init failed:\n");
+		fflush(stdout);
+	} else {
+		printf("RawInput init success!\n");
+		fflush(stdout);
+	}
+/*	UINT nDevices;
+	PRAWINPUTDEVICELIST pRawInputDeviceList;
+	if (GetRawInputDeviceList(NULL, &nDevices, sizeof(RAWINPUTDEVICELIST)) != 0) {
+
+		pRawInputDeviceList = (RAWINPUTDEVICELIST *)malloc(sizeof(RAWINPUTDEVICELIST) * nDevices);
+		GetRawInputDeviceList(pRawInputDeviceList, &nDevices, sizeof(RAWINPUTDEVICELIST));
+	}*/
+}
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+bool UIYabause::nativeEvent(const QByteArray &eventType, void *msg, long *result) {
+	MSG *message = static_cast<MSG*>(msg);
+#else
+bool UIYabause::winEvent(MSG *message, long *result) {
+#endif
+	LPBYTE lpb;// = new BYTE[dwSize];//LPBYTE lpb = new BYTE[dwSize];
+	UINT dwSize;
+	RAWINPUT *raw;
+
+	if( (emulateMouse || emulateGun) && mouseCaptured) {
+		fflush(stdout);
+		if (message->message == WM_INPUT ) {
+			printf(" - WM_INPUT");
+			fflush(stdout);
+			GetRawInputData((HRAWINPUT)message->lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+			lpb = (LPBYTE) malloc(sizeof(LPBYTE) * dwSize);
+			if (lpb == NULL) {
+				return false;
+			} 
+		
+			if (GetRawInputData((HRAWINPUT)message->lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize ) {
+				OutputDebugString (TEXT("GetRawInputData doesn't return correct size !\n"));
+			}
+
+			raw = (RAWINPUT*)lpb;
+
+			if (raw->header.dwType == RIM_TYPEMOUSE) {
+				u32 mouse_id = (1 << 31) | (((DWORD)raw->header.hDevice) << 5);
+
+				// Handle the mouse buttons
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_1_DOWN)
+					PerKeyDown(mouse_id | 1 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_1_UP)
+					PerKeyUp( mouse_id | 1 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_2_DOWN)
+					PerKeyDown( mouse_id | 2 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_2_UP)
+					PerKeyUp( mouse_id | 2 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_3_DOWN)
+					PerKeyDown( mouse_id | 3 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_3_UP)
+					PerKeyUp( mouse_id | 3 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_4_DOWN)
+					PerKeyDown( mouse_id | 4 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_4_UP)
+					PerKeyUp( mouse_id | 4 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_5_DOWN)
+					PerKeyDown( mouse_id | 5 );
+				if (raw->data.mouse.ulRawButtons & RI_MOUSE_BUTTON_5_UP)
+					PerKeyUp( mouse_id | 5 );
+
+				if (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
+					double x = (((double)raw->data.mouse.lLastX /* - geometry().x() */) / mYabauseGL->width());
+					double y = (((double)raw->data.mouse.lLastY /* - geometry().y() */) / mYabauseGL->height());
+					
+					printf("Absolute move %f, %f", x, y);
+					PerAxisMove(mouse_id | 6, x, y);
+				} else {
+					printf("Relative move not supported!");
+					fflush(stdout);
+					//PerAxisMove(mouse_id, x, y);
+				}
+
+				/*printf("Mouse:hDevice %d \n\t usFlags=%04x \n\tulButtons=%04x \n\tusButtonFlags=%04x \n\tusButtonData=%04x \n\tulRawButtons=%04x \n\tlLastX=%ld \n\tlLastY=%ld \n\tulExtraInformation=%04x\r, %ld\n",					
+					raw->header.hDevice,
+					raw->data.mouse.usFlags, 
+					raw->data.mouse.ulButtons, 
+					raw->data.mouse.usButtonFlags, 
+					raw->data.mouse.usButtonData, 
+					raw->data.mouse.ulRawButtons, 
+					raw->data.mouse.lLastX, 
+					raw->data.mouse.lLastY, 
+					raw->data.mouse.ulExtraInformation);*/
+				fflush(stdout);
+				return true;
+			} 
+			free(lpb); 
+		}
+		printf("\n");
+	}
+	fflush(stdout);
+	return false;
+}
+#endif
+#endif

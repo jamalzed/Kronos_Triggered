@@ -17,6 +17,12 @@
 	You should have received a copy of the GNU General Public License
 	along with Yabause; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 #include "UISettings.h"
 #include "../Settings.h"
@@ -29,7 +35,9 @@
 #include <QList>
 #include <QDesktopWidget>
 #include <QImageWriter>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 #include <QStorageInfo>
+#endif
 #include <QToolTip>
 
 #include "VolatileSettings.h"
@@ -43,6 +51,10 @@ extern SoundInterface_struct* SNDCoreList[];
 extern VideoInterface_struct* VIDCoreList[];
 extern OSD_struct* OSDCoreList[];
 }
+
+#if __cplusplus <= 199711L
+bool checkAndCreateDirectory (QDir screenshotsDirectory);
+#endif
 
 struct Item
 {
@@ -140,6 +152,8 @@ const Items mWireframe = Items()
 UISettings::UISettings(QList <translation_struct> *translations, QWidget* p )
 	: QDialog( p )
 {
+	selectedCartridgeType = 0;
+
 	// setup dialog
 	setupUi( this );
 
@@ -230,12 +244,21 @@ QStringList getCdDriveList()
 	QStringList list;
 
 #if defined Q_OS_WIN
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 	foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
 		QFileInfo drive(storage.rootPath());
 		LPCWSTR driveString = (LPCWSTR)drive.filePath().utf16();
 		if (GetDriveTypeW(driveString) == DRIVE_CDROM)
 			list.append(storage.rootPath());
 	}
+#else
+	foreach( QFileInfo drive, QDir::drives () )
+	{
+		LPCWSTR driveString = (LPCWSTR)drive.filePath().utf16();
+		if (GetDriveTypeW(driveString) == DRIVE_CDROM)
+			list.append(drive.filePath());
+	}
+#endif
 #elif defined Q_OS_LINUX
 	FILE * f = fopen("/proc/sys/dev/cdrom/info", "r");
 	char buffer[1024];
@@ -607,7 +630,11 @@ void UISettings::loadCores()
 	foreach(QByteArray ba, QImageWriter::supportedImageFormats())
 		if (!filters.contains(ba, Qt::CaseInsensitive))
 			filters << QString(ba).toLower();
+#if _MSC_VER && !__INTEL_COMPILER
+	for each (auto entry in filters)
+#else
 	for (auto entry : filters)
+#endif
 	{
 		cbScreenshotImageFormat->addItem(entry, entry);
 	}
@@ -640,8 +667,13 @@ void UISettings::populateShortcutsView()
 	QList<QAction *> actions = parent()->findChildren<QAction *>();
 	foreach ( QAction* action, actions )
 	{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 		if (action->text().isEmpty() || !action->isShortcutVisibleInContextMenu())
 			continue;
+#else
+		if (action->text().isEmpty())
+			continue;
+#endif
 
 		actionsList.append(action);
 	}
@@ -700,6 +732,8 @@ void UISettings::loadSettings()
 		auto const defaultScreenshotsPath = QtYabause::DefaultPaths::Screenshots();
 		leScreenshots->setText(s->value(QtYabause::SettingKeys::ScreenshotsDirectory, defaultScreenshotsPath).toString());
 		auto screenshotsDirectory = QDir(leScreenshots->text());
+
+#if __cplusplus > 199711L
 		auto checkAndCreateDirectory = [&screenshotsDirectory]{
 			if(!screenshotsDirectory.exists())
 			{
@@ -714,6 +748,15 @@ void UISettings::loadSettings()
 			screenshotsDirectory = QDir(leScreenshots->text());
 			checkAndCreateDirectory(); //we could show an message box if this fails (no write access to our folder) but if so we have plenty of problems and i do not want to spam the user with the message that screenshots folder cant be created. it would be misleading in with the overall problem to not having write access in general
 		}
+#else
+		if (!checkAndCreateDirectory(screenshotsDirectory))
+		{
+			//when there is an invalid entry to the setting fall back to the default directory
+			leScreenshots->setText(defaultScreenshotsPath);
+			screenshotsDirectory = QDir(leScreenshots->text());
+			checkAndCreateDirectory(screenshotsDirectory); //we could show an message box if this fails (no write access to our folder) but if so we have plenty of problems and i do not want to spam the user with the message that screenshots folder cant be created. it would be misleading in with the overall problem to not having write access in general
+		}
+#endif
 		cbScreenshotImageFormat->setCurrentIndex(cbScreenshotImageFormat->findData(s->value(QtYabause::SettingKeys::ScreenshotsFormat, cbScreenshotImageFormat->itemData(0))));
 	}
 	cbSysLanguageID->setCurrentIndex( cbSysLanguageID->findData( s->value( "General/SystemLanguageID", mSysLanguageID.at( 0 ).id ).toString() ) );
@@ -804,10 +847,19 @@ void UISettings::loadSettings()
 	//shortcuts
 	{
 		auto const actions = parent()->findChildren<QAction *>();
+#if _MSC_VER && !__INTEL_COMPILER
+		for each (auto const action in actions)
+#else
 		for(auto const action : actions)
+#endif
 		{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 			if (action->text().isEmpty() || !action->isShortcutVisibleInContextMenu())
 				continue;
+#else
+			if (action->text().isEmpty())
+				continue;
+#endif
 
 			auto const var = s->value(action->text());
 			if(!var.isValid() || var.isNull() )
@@ -905,11 +957,19 @@ void UISettings::saveSettings()
 	applyShortcuts();
 	s->beginGroup("Shortcuts");
 	auto const actions = parent()->findChildren<QAction *>();
+#if _MSC_VER && !__INTEL_COMPILER
+	for each ( auto const * const action in actions )
+#else
 	for ( auto const * const action : actions )
+#endif
 	{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 		if (action->text().isEmpty() || !action->isShortcutVisibleInContextMenu())
 			continue;
-
+#else
+		if (action->text().isEmpty())
+			continue;
+#endif
 		s->setValue(action->text(), action->shortcut().toString());
 	}
 	s->endGroup();
@@ -940,3 +1000,12 @@ void UISettings::updateVolatileSettings() const
 	auto* const volatileSettings = QtYabause::volatileSettings();
 	volatileSettings->setValue(QtYabause::VolatileSettingKeys::CartridgePath, leCartridge->text());
 }
+
+#if __cplusplus <= 199711L
+bool checkAndCreateDirectory (QDir screenshotsDirectory) {
+	if(!screenshotsDirectory.exists()) {
+			return screenshotsDirectory.mkdir(screenshotsDirectory.path());
+	}
+	return true;
+};
+#endif

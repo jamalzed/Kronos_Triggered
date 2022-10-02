@@ -16,6 +16,12 @@
 	You should have received a copy of the GNU General Public License
 	along with Yabause; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 #ifndef UICONTROLLERSETTING_H
 #define UICONTROLLERSETTING_H
@@ -60,6 +66,13 @@ protected:
 	void setScanFlags(u32 scanMask);
 
 	virtual bool eventFilter( QObject* object, QEvent* event );
+#if defined(WIN32) && defined(MULTI_MOUSE)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+	virtual bool nativeEvent(const QByteArray &eventType, void *msg, long *result) override;
+#else
+	virtual bool winEvent(MSG *message, long *result) override;
+#endif
+#endif
 
 protected slots:
 	void tbButton_clicked();
