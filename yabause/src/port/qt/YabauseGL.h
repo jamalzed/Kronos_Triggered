@@ -22,10 +22,18 @@
 #define YABAUSEGL_H
 
 #ifdef HAVE_LIBGL
+/*#if QT_VERSION < QT_VERSION_CHECK(5, 4, 0)
+#include <GL\glew.h>
+#include <QGLWidget>
+#include <QImage>
+
+class YabauseGL : public QGLWidget
+#else*/
 #include <QOpenGLWindow>
 #include <QOpenGLFunctions>
 
 class YabauseGL : public QOpenGLWindow, protected QOpenGLFunctions
+//#endif
 #else
 #include <QWidget>
 #include <QImage>
@@ -35,13 +43,12 @@ class YabauseGL : public QWidget
 #endif
 {
 	Q_OBJECT
-
+	
 public:
 	YabauseGL( );
-
+	
 	void updateView( const QSize& size = QSize() );
 	void swapBuffers();
-	void getScale(float *xRatio, float *yRatio);
 #ifndef HAVE_LIBGL
         QImage grabFrameBuffer();
 	virtual void paintEvent( QPaintEvent * event );
@@ -52,8 +59,13 @@ Q_SIGNALS:
 	void glInitialized();
 
 protected:
+#if defined(HAVE_LIBGL) && QT_VERSION > QT_VERSION_CHECK(5, 4, 0)
         void initializeGL() override;
         void resizeGL(int width, int height) override;
+#else
+        void initializeGL() override;
+        void resizeGL(int width, int height) override;
+#endif
         void keyPressEvent( QKeyEvent* e ) override;
         void keyReleaseEvent( QKeyEvent* e ) override;
 };

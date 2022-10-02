@@ -22,17 +22,23 @@
 #include "QtYabause.h"
 #include <QKeyEvent>
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 YabauseGL::YabauseGL( ) : QOpenGLWindow()
 {
   QSurfaceFormat format;
+#else
+YabauseGL::YabauseGL( ) : QGLWidget()
+{
+  QGLFormat format;
+#endif
   format.setDepthBufferSize(24);
   format.setStencilBufferSize(8);
   format.setRedBufferSize(8);
   format.setGreenBufferSize(8);
   format.setBlueBufferSize(8);
   format.setAlphaBufferSize(8);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 3, 0)
   format.setSwapInterval(0);
-  format.setRenderableType(QSurfaceFormat::OpenGL);
 
 #ifdef _OGL3_
   format.setMajorVersion(4);
@@ -50,14 +56,19 @@ YabauseGL::YabauseGL( ) : QOpenGLWindow()
   format.setMinorVersion(1);
   format.setRenderableType(QSurfaceFormat::OpenGLES);
 #endif
-
   format.setProfile(QSurfaceFormat::CoreProfile);
+#else
+  //format.setRenderableType(QGLFormat::OpenGL);
+  format.setProfile(QGLFormat::CoreProfile);
+#endif
   setFormat(format);
 }
 
 void YabauseGL::initializeGL()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 3, 0)
   initializeOpenGLFunctions();
+#endif
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   glInitialized();
@@ -65,20 +76,16 @@ void YabauseGL::initializeGL()
 
 void YabauseGL::swapBuffers()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 3, 0)
+  context()->makeCurrent(context()->surface());
   context()->swapBuffers(context()->surface());
+#else
+  context()->swapBuffers();
+#endif
 }
 
 void YabauseGL::resizeGL( int w, int h )
 { updateView( QSize( w, h ) ); }
-
-void YabauseGL::getScale(float *xRatio, float* yRatio) {
-  if ( VIDCore ) {
-    VIDCore->getScale(xRatio, yRatio);
-  } else {
-    *xRatio = 1.0;
-    *yRatio = 1.0;
-  }
-}
 
 void YabauseGL::updateView( const QSize& s )
 {

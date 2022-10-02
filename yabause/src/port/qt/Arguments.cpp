@@ -41,7 +41,7 @@ namespace Arguments
 		void (*callback)(const QString& param);
 	};
 
-	static std::vector<Option> const availableOptions =
+	static const Option ao_arr [] =
 	{
 		{ NULL,  "--autoframeskip=", "0|1", "Enable or disable vertical synchronization.",  2, autoframeskip },
 		{ NULL,  "--autoload=", "<SAVESTATE>", "Automatically start emulation and load a save state.",1, autoload },
@@ -57,6 +57,23 @@ namespace Arguments
         { "-ns", "--no-sound", NULL,        "Turns sound off.",                                   6, nosound },
 		{ "-v",  "--version", NULL,         "Show version and exit.",                             0, version },
 	};
+
+	static std::vector<Option> const availableOptions (ao_arr, ao_arr + sizeof(ao_arr) / sizeof(ao_arr[0]) ); /*=
+	{
+		{ NULL,  "--autoframeskip=", "0|1", "Enable or disable vertical synchronization.",  2, autoframeskip },
+		{ NULL,  "--autoload=", "<SAVESTATE>", "Automatically start emulation and load a save state.",1, autoload },
+		{ "-a",  "--autostart", NULL,       "Automatically start emulation.",                      1, autostart },
+		{ NULL,  "--binary=", "<FILE>[:ADDRESS]", "Use a binary file.",                           1, binary },
+		{ "-b",  "--bios=", "<BIOS>",       "Choose a bios file.",                                3, bios },
+		{ "-l",  "--language=", "<language>","Choose the system language: english, deutsch, french, spanish, italian, japanese",                     7, syslangid },
+		{ "-c",  "--cdrom=", "<CDROM>",     "Choose the cdrom device.",                           4, cdrom },
+		{ "-f",  "--fullscreen", NULL,      "Start the emulator in fullscreen.",                  5, fullscreen },
+		{ "-h",  "--help", NULL,            "Show this help and exit.",                           0, help },
+		{ "-i",  "--iso=", "<ISO>",         "Choose a dump image file. supports i.e. .cue, .iso, .zip", 4, iso },
+        { "-nb", "--no-bios", NULL,         "Use the emulated bios.",                              3, nobios },
+        { "-ns", "--no-sound", NULL,        "Turns sound off.",                                   6, nosound },
+		{ "-v",  "--version", NULL,         "Show version and exit.",                             0, version },
+	};*/
 
 	void parse()
 	{
@@ -90,7 +107,11 @@ namespace Arguments
 				}
 			}
 
+#if _MSC_VER && !__INTEL_COMPILER
+			for each (Option const & option in availableOptions)
+#else
 			for(Option const & option : availableOptions)
+#endif
 			{
 				if (argument == option.shortname)
 				{
@@ -107,7 +128,7 @@ namespace Arguments
 			}
 		}
 
-		for(int i = 0; i < availableOptions.size(); i++)
+		for(u32 i = 0; i < availableOptions.size(); i++)
 		{
 			Option const * option = choosenOptions[i];
 			if (option)
@@ -191,7 +212,11 @@ namespace Arguments
 	{
 		std::cout << std::endl << "Kronos commands:" << std::endl;
 
-		for(Option const & option : availableOptions)
+#if _MSC_VER && !__INTEL_COMPILER
+			for each (Option const & option in availableOptions)
+#else
+			for(Option const & option : availableOptions)
+#endif
 		{
 			QString longandparam(option.longname);
 			if (option.parameter)

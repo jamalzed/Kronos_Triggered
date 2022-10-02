@@ -18,6 +18,10 @@
 	along with Yabause; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_HANDLED
+#endif
+
 #include <QApplication>
 
 #include "QtYabause.h"
@@ -47,7 +51,9 @@ int main( int argc, char** argv )
 #endif
 
 	// create application
+#if QT_VERSION >= QT_VERSION_CHECK(5, 3, 0)
 	QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+#endif
 	QApplication app( argc, argv );
 	// init application
 	app.setApplicationName( QString( "Kronos v%1" ).arg( VERSION ) );
