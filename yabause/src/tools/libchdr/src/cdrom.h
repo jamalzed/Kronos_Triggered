@@ -15,6 +15,9 @@
 
 #include <stdint.h>
 
+#if _MSC_VER && !__INTEL_COMPILER && !defined(inline)
+#define inline __inline
+#endif
 
 /***************************************************************************
     CONSTANTS

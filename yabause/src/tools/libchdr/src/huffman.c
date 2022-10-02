@@ -125,11 +125,13 @@
 
 struct huffman_decoder* create_huffman_decoder(int numcodes, int maxbits)
 {
+	struct huffman_decoder* decoder;
+	
 	/* limit to 24 bits */
 	if (maxbits > 24)
 		return NULL;
 
-	struct huffman_decoder* decoder = (struct huffman_decoder*)malloc(sizeof(struct huffman_decoder));
+	decoder = (struct huffman_decoder*)malloc(sizeof(struct huffman_decoder));
 	decoder->numcodes = numcodes;
 	decoder->maxbits = maxbits;
 	decoder->lookup = (lookup_value*)malloc(sizeof(lookup_value) * (1 << maxbits));
@@ -167,8 +169,11 @@ uint32_t huffman_decode_one(struct huffman_decoder* decoder, struct bitstream* b
 
 enum huffman_error huffman_import_tree_rle(struct huffman_decoder* decoder, struct bitstream* bitbuf)
 {
-	/* bits per entry depends on the maxbits */
+	int curnode;
 	int numbits;
+	enum huffman_error error;
+
+	/* bits per entry depends on the maxbits */
 	if (decoder->maxbits >= 16)
 		numbits = 5;
 	else if (decoder->maxbits >= 8)
@@ -177,7 +182,6 @@ enum huffman_error huffman_import_tree_rle(struct huffman_decoder* decoder, stru
 		numbits = 3;
 
 	/* loop until we read all the nodes */
-	int curnode;
 	for (curnode = 0; curnode < decoder->numcodes; )
 	{
 		/* a non-one value is just raw */
@@ -208,7 +212,7 @@ enum huffman_error huffman_import_tree_rle(struct huffman_decoder* decoder, stru
 		return HUFFERR_INVALID_DATA;
 
 	/* assign canonical codes for all nodes based on their code lengths */
-	enum huffman_error error = huffman_assign_canonical_codes(decoder);
+	error = huffman_assign_canonical_codes(decoder);
 	if (error != HUFFERR_NONE)
 		return error;
 
@@ -229,11 +233,16 @@ enum huffman_error huffman_import_tree_rle(struct huffman_decoder* decoder, stru
 enum huffman_error huffman_import_tree_huffman(struct huffman_decoder* decoder, struct bitstream* bitbuf)
 {
 	/* start by parsing the lengths for the small tree */
+	int index, last, curcode, start, count;
+	uint8_t rlefullbits;
+	uint32_t temp;
 	struct huffman_decoder* smallhuff = create_huffman_decoder(24, 6);
+	enum huffman_error error;
+
 	smallhuff->huffnode[0].numbits = bitstream_read(bitbuf, 3);
-	int start = bitstream_read(bitbuf, 3) + 1;
-	int count = 0;
-	for (int index = 1; index < 24; index++)
+	start = bitstream_read(bitbuf, 3) + 1;
+	count = 0;
+	for (index = 1; index < 24; index++)
 	{
 		if (index < start || count == 7)
 			smallhuff->huffnode[index].numbits = 0;
@@ -245,20 +254,19 @@ enum huffman_error huffman_import_tree_huffman(struct huffman_decoder* decoder, 
 	}
 
 	/* then regenerate the tree */
-	enum huffman_error error = huffman_assign_canonical_codes(smallhuff);
+	error = huffman_assign_canonical_codes(smallhuff);
 	if (error != HUFFERR_NONE)
 		return error;
 	huffman_build_lookup_table(smallhuff);
 
 	/* determine the maximum length of an RLE count */
-	uint32_t temp = decoder->numcodes - 9;
-	uint8_t rlefullbits = 0;
+	temp = decoder->numcodes - 9;
+	rlefullbits = 0;
 	while (temp != 0)
 		temp >>= 1, rlefullbits++;
 
 	/* now process the rest of the data */
-	int last = 0;
-	int curcode;
+	last = 0;
 	for (curcode = 0; curcode < decoder->numcodes; )
 	{
 		int value = huffman_decode_one(smallhuff, bitbuf);
@@ -299,13 +307,16 @@ enum huffman_error huffman_import_tree_huffman(struct huffman_decoder* decoder, 
 enum huffman_error huffman_compute_tree_from_histo(struct huffman_decoder* decoder)
 {
 	/* compute the number of data items in the histogram */
-	uint32_t sdatacount = 0;
-	for (int i = 0; i < decoder->numcodes; i++)
+	int i = 0;
+	uint32_t sdatacount = 0, lowerweight, upperweight;
+
+	for (i = 0; i < decoder->numcodes; i++)
 		sdatacount += decoder->datahisto[i];
 
 	/* binary search to achieve the optimum encoding */
-	uint32_t lowerweight = 0;
-	uint32_t upperweight = sdatacount * 2;
+	lowerweight = 0;
+	upperweight = sdatacount * 2;
+
 	while (1)
 	{
 		/* build a tree using the current weight */
@@ -361,9 +372,11 @@ int huffman_build_tree(struct huffman_decoder* decoder, uint32_t totaldata, uint
 {
 	/* make a list of all non-zero nodes */
 	struct node_t** list = (struct node_t**)malloc(sizeof(struct node_t*) * decoder->numcodes * 2);
-	int listitems = 0;
+	int listitems = 0, nextalloc, curitem, curcode = 0, maxbits;
+	struct node_t *curnode;
+
 	memset(decoder->huffnode, 0, decoder->numcodes * sizeof(decoder->huffnode[0]));
-	for (int curcode = 0; curcode < decoder->numcodes; curcode++)
+	for (curcode = 0; curcode < decoder->numcodes; curcode++)
 		if (decoder->datahisto[curcode] != 0)
 		{
 			list[listitems++] = &decoder->huffnode[curcode];
@@ -395,7 +408,8 @@ int huffman_build_tree(struct huffman_decoder* decoder, uint32_t totaldata, uint
 #endif
 
 	/* now build the tree */
-	int nextalloc = decoder->numcodes;
+	nextalloc = decoder->numcodes;
+
 	while (listitems > 1)
 	{
 		/* remove lowest two items */
@@ -409,7 +423,6 @@ int huffman_build_tree(struct huffman_decoder* decoder, uint32_t totaldata, uint
 		newnode->weight = node0->weight + node1->weight;
 
 		/* insert into list at appropriate location */
-		int curitem;
 		for (curitem = 0; curitem < listitems; curitem++)
 			if (newnode->weight > list[curitem]->weight)
 			{
@@ -421,8 +434,9 @@ int huffman_build_tree(struct huffman_decoder* decoder, uint32_t totaldata, uint
 	}
 
 	/* compute the number of bits in each code, and fill in another histogram */
-	int maxbits = 0;
-	for (int curcode = 0; curcode < decoder->numcodes; curcode++)
+	maxbits = 0;
+
+	for (curcode = 0; curcode < decoder->numcodes; curcode++)
 	{
 		struct node_t* node = &decoder->huffnode[curcode];
 		node->numbits = 0;
@@ -432,7 +446,7 @@ int huffman_build_tree(struct huffman_decoder* decoder, uint32_t totaldata, uint
 		if (node->weight > 0)
 		{
 			/* determine the number of bits for this node */
-			for (struct node_t *curnode = node; curnode->parent != NULL; curnode = curnode->parent)
+			for (curnode = node; curnode->parent != NULL; curnode = curnode->parent)
 				node->numbits++;
 			if (node->numbits == 0)
 				node->numbits = 1;
@@ -454,8 +468,10 @@ int huffman_build_tree(struct huffman_decoder* decoder, uint32_t totaldata, uint
 enum huffman_error huffman_assign_canonical_codes(struct huffman_decoder* decoder)
 {
 	/* build up a histogram of bit lengths */
+	int curcode, codelen;
+	uint32_t curstart;
 	uint32_t bithisto[33] = { 0 };
-	for (int curcode = 0; curcode < decoder->numcodes; curcode++)
+	for (curcode = 0; curcode < decoder->numcodes; curcode++)
 	{
 		struct node_t* node = &decoder->huffnode[curcode];
 		if (node->numbits > decoder->maxbits)
@@ -465,8 +481,9 @@ enum huffman_error huffman_assign_canonical_codes(struct huffman_decoder* decode
 	}
 
 	/* for each code length, determine the starting code number */
-	uint32_t curstart = 0;
-	for (int codelen = 32; codelen > 0; codelen--)
+	curstart = 0;
+
+	for (codelen = 32; codelen > 0; codelen--)
 	{
 		uint32_t nextstart = (curstart + bithisto[codelen]) >> 1;
 		if (codelen != 1 && nextstart * 2 != (curstart + bithisto[codelen]))
@@ -476,7 +493,7 @@ enum huffman_error huffman_assign_canonical_codes(struct huffman_decoder* decode
 	}
 
 	/* now assign canonical codes */
-	for (int curcode = 0; curcode < decoder->numcodes; curcode++)
+	for (curcode = 0; curcode < decoder->numcodes; curcode++)
 	{
 		struct node_t* node = &decoder->huffnode[curcode];
 		if (node->numbits > 0)
@@ -493,8 +510,10 @@ enum huffman_error huffman_assign_canonical_codes(struct huffman_decoder* decode
 
 void huffman_build_lookup_table(struct huffman_decoder* decoder)
 {
+	int curcode;
+
 	/* iterate over all codes */
-	for (int curcode = 0; curcode < decoder->numcodes; curcode++)
+	for (curcode = 0; curcode < decoder->numcodes; curcode++)
 	{
 		/* process all nodes which have non-zero bits */
 		struct node_t* node = &decoder->huffnode[curcode];
