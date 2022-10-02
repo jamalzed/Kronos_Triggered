@@ -29,6 +29,7 @@
 #include "vdp1.h"
 #include "yabause.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
