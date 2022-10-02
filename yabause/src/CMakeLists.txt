@@ -125,6 +125,8 @@ set(kronos_HEADERS
   utils/include/japmodem.h
 	tools/junzip/junzip.h
 )
+#	core/video/oldgl/vidoldgl.h
+#	core/video/oldgl/yglold.h
 
 option(YAB_MULTIBUILD "Choose wether to build all ports or only a single one")
 set(YAB_PORT_BUILT FALSE)
@@ -840,7 +842,8 @@ if (YAB_NETWORK AND UNIX)
     set(KRONOS_LIBRARIES ${KRONOS_LIBRARIES} "socket")
 endif()
 
-option(YAB_TESTS "Build test programs for cores" OFF)
-if (YAB_TESTS)
-	add_subdirectory("tools")
-endif()
+# Does not work
+#option(YAB_TESTS "Build test programs for cores" OFF)
+#if (YAB_TESTS)
+#	add_subdirectory("tools")
+#endif()
