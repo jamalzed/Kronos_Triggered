@@ -769,8 +769,8 @@ static void FASTCALL BiosBUPSelectPartition(SH2_struct * sh)
    u32 blocksize;
    u32 ret;
    u32 freeblocks = 0;
-   u32 needsize;
-   int aftersize;
+   //u32 needsize;
+   //int aftersize;
 
    SH2GetRegisters(sh, &sh->regs);
 
@@ -2010,7 +2010,7 @@ int BiosBUPExport(SH2_struct *sh, u32 device, const char *savename, char ** buf,
   int numblocks;
   int blocksread;
   u32 datasize;
-  char fname[11];
+  //char fname[11];
   int i;
 
   ret = GetDeviceStats(device, &size, &addr, &blocksize);
