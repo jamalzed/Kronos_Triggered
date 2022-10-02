@@ -403,7 +403,7 @@ static int shallBeEscaped(char c) {
 }
 
 static int charToEscape(char *buffer) {
-  int i;
+  unsigned int i;
   int ret = 0;
   for (i=0; i<strlen(buffer); i++) {
     if(shallBeEscaped(buffer[i])) ret++;
@@ -442,7 +442,7 @@ static FILE* fopenInPath(char* filename, char* path){
 #else
 static FILE* fopenInPath(char* filename, char* path){
   int l = strlen(filename)+2;
-  int k;
+  unsigned int k;
   char* filepath = (char*)malloc((l + charToEscape(filename) + charToEscape(path)+strlen(path))*sizeof(char));
   char* tmp;
   tmp = filepath;
@@ -463,7 +463,7 @@ static FILE* fopenInPath(char* filename, char* path){
 static FILE* OpenFile(char* buffer, const char* cue) {
    char *filename, *endofpath;
    char *path;
-   int tmp;
+   unsigned int tmp;
    FILE *ret_file = NULL;
    // Now go and open up the image file, figure out its size, etc.
    if ((ret_file = fopen(buffer, "rb")) == NULL)
@@ -516,7 +516,7 @@ static int LoadBinCue(const char *cuefilename, FILE *iso_file)
    unsigned int indexnum, min, sec, frame;
    unsigned int pregap=0;
    track_info_struct trk[100];
-   int i;
+//   int i;
    int matched = 0;
    FILE *trackfp = NULL;
    int trackfp_size = 0;
@@ -717,8 +717,9 @@ int infoFile(JZFile *zip, int idx, JZFileHeader *header, char *filename, void *u
 int deflateFile(JZFile *zip, int idx, JZFileHeader *header, char *filename, void *user_data) {
     long offset;
     char name[1024];
+	ZipEntry *entry;
     offset = zip->tell(zip); // store current position
-    ZipEntry *entry = (ZipEntry*)user_data;
+    entry = (ZipEntry*)user_data;
    if (entry == NULL) exit(-1);
     if(zip->seek(zip, header->offset, SEEK_SET)) {
         printf("Cannot seek in zip file!\n");
@@ -807,7 +808,7 @@ static int LoadBinCueInZip(const char *filename, FILE *fp)
    unsigned int indexnum, min, sec, frame;
    unsigned int pregap=0;
    track_info_struct trk[100];
-   int i;
+//   int i;
    int matched = 0;
    char *trackfp = NULL;
    int trackfp_size = 0;
@@ -815,11 +816,11 @@ static int LoadBinCueInZip(const char *filename, FILE *fp)
    int pos;
 
    JZEndRecord* endRecord = (JZEndRecord*)malloc(sizeof(JZEndRecord));
-   JZFileHeader header;
+//   JZFileHeader header;
    u8* data;
    ZipEntry* tracktr = NULL;
    JZFile *zip;
-   FILE *iso_file;
+//   FILE *iso_file;
    ZipEntry *cue;
    int index = 0;
 
@@ -1719,7 +1720,7 @@ static int ISOCDReadSectorFAD(u32 FAD, void *buffer) {
    ZipEntry *tr = NULL;
    u8* zipBuffer;
    int found = 0;
-   int offset = 0;
+   u32 offset = 0;
 
    assert(disc.session);
 
@@ -1873,6 +1874,7 @@ ChdInfo * pChdInfo = NULL;
 
 static int LoadCHD(const char *chd_filename, FILE *iso_file)
 {
+  int padded;
   int trak_number;
   char track_type[64];
   char track_subtype[64];
@@ -1881,12 +1883,18 @@ static int LoadCHD(const char *chd_filename, FILE *iso_file)
   char pg_type[64];
   char pg_sub_type[64];
   int postgap = 0;
-
+  int num_tracks = 0;
   int meta_outlen = 512 * 1024;
   u8 * buf = (u8*)malloc(meta_outlen);
   u32 resultlen;
   u32 resulttag;
   u8 resultflags;
+  track_info_struct trk[100];
+  u32 chdofs = 0;
+  u32 physofs = 0;
+  u32 logofs = 150;
+  int i;
+  chd_error error;
 
   if (pChdInfo != NULL) {
     free(pChdInfo);
@@ -1895,12 +1903,9 @@ static int LoadCHD(const char *chd_filename, FILE *iso_file)
   pChdInfo = (ChdInfo*)malloc(sizeof(ChdInfo));
   memset(pChdInfo, 0, sizeof(ChdInfo));
 
-  track_info_struct trk[100];
   memset(trk, 0, sizeof(trk));
 
-  int num_tracks = 0;
-
-  chd_error error = chd_open(chd_filename, CHD_OPEN_READ, NULL, &pChdInfo->chd);
+  error = chd_open(chd_filename, CHD_OPEN_READ, NULL, &pChdInfo->chd);
   if (error != CHDERR_NONE) {
     free(buf);
     return -1;
@@ -1931,7 +1936,7 @@ static int LoadCHD(const char *chd_filename, FILE *iso_file)
     trk[num_tracks].postgap = postgap;
 
     trk[num_tracks].frames = frame;
-    int padded = (frame + CD_TRACK_PADDING - 1) / CD_TRACK_PADDING;
+    padded = (frame + CD_TRACK_PADDING - 1) / CD_TRACK_PADDING;
     trk[num_tracks].extraframes = padded * CD_TRACK_PADDING - frame;
 
 
@@ -2023,10 +2028,6 @@ static int LoadCHD(const char *chd_filename, FILE *iso_file)
   trk[num_tracks].file_offset = 0;
   trk[num_tracks].fad_start = 0xFFFFFFFF;
 
-  u32 chdofs = 0;
-  u32 physofs = 0;
-  u32 logofs = 150;
-  int i;
   for (i = 0; i < num_tracks; i++)
   {
     trk[i].fad_start = logofs + trk[i].pregap;
@@ -2081,17 +2082,19 @@ static int LoadCHD(const char *chd_filename, FILE *iso_file)
 
 
 static int ISOCDReadSectorFADFromCHD(u32 FAD, void *buffer) {
-  int i, j;
+  unsigned int i, j;
   size_t num_read = 0;
   track_info_struct *track = NULL;
   u32 chdlba;
   u32 physlba;
   u32 loglba = FAD;
+  int hunkid;
+  int hunk_offset;
 
   chdlba = loglba;
-  for (i = 0; i < disc.session_num; i++)
+  for (i = 0; i < (unsigned int) disc.session_num; i++)
   {
-    for (j = 0; j < disc.session[i].track_num-1 ; j++)
+    for (j = 0; j < (unsigned int) disc.session[i].track_num-1 ; j++)
     {
       //if (j == 1) {
       //  int a = 0;
@@ -2117,8 +2120,8 @@ static int ISOCDReadSectorFADFromCHD(u32 FAD, void *buffer) {
     return 0;
   }
 
-  int hunkid = (chdlba*CD_FRAME_SIZE) / pChdInfo->header->hunkbytes ;
-  int hunk_offset =  (chdlba*CD_FRAME_SIZE) % pChdInfo->header->hunkbytes;
+  hunkid = (chdlba*CD_FRAME_SIZE) / pChdInfo->header->hunkbytes ;
+  hunk_offset =  (chdlba*CD_FRAME_SIZE) % pChdInfo->header->hunkbytes;
 
   if (pChdInfo->current_hunk_id != hunkid) {
     chd_read(pChdInfo->chd, hunkid, pChdInfo->hunk_buffer);
@@ -2126,7 +2129,7 @@ static int ISOCDReadSectorFADFromCHD(u32 FAD, void *buffer) {
   }
 
   if (track->ctl_addr == 0x01) {
-    for (int i = 0; i < track->sector_size; i += 2) {
+    for (i = 0; i < track->sector_size; i += 2) {
       ((char*)buffer)[i] = pChdInfo->hunk_buffer[hunk_offset + i + 1];
       ((char*)buffer)[i+1] = pChdInfo->hunk_buffer[hunk_offset + i];
     }

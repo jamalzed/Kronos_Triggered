@@ -796,7 +796,7 @@ void* netlink_client(void *data)
 
    while (netlink_client_thread_running)
    {
-      int bytes;
+      unsigned int bytes;
       if (YabSockSelect(client->sock, 1, 1) != 0)
       {
          continue;

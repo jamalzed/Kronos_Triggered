@@ -61,10 +61,16 @@ void DBLookup(int* const cart_type, const char** cart_path, const char * support
 #else
    char slash = '/';
 #endif
+   int i=0;
+   char* game_code;
+   u64 game_id;
    Cs2GetIP(1);
-   const char* game_code = Cs2GetCurrentGmaecode();
-   const u64 game_id = Cs2GetGameId();
-   for (int i=0; i<NB_GAMES_DB; i++) {
+   
+   // const variables
+   game_code = Cs2GetCurrentGmaecode();
+   game_id = Cs2GetGameId();
+
+   for (i=0; i<NB_GAMES_DB; i++) {
       // Heart of Darkness has no game_code, but i lack information on game_id's uniqueness, so a false positive is not impossible
       if ((GameDBList[i].game_code != NULL && game_code != NULL && strcmp(GameDBList[i].game_code, game_code) == 0)
       || (GameDBList[i].game_id != 0 && game_id != 0 && GameDBList[i].game_id == game_id)) {
