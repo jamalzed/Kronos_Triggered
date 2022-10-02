@@ -17,6 +17,12 @@
 	You should have received a copy of the GNU General Public License
 	along with Yabause; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
+	Lightgun support fixed by JamalZ (2022).
+	If you like this program, kindly consider maintaining support for older compilers
+	and donating Sega Saturn and Super Nintendo software and hardware to help me,
+	so I can work on similar projects to benefit the gaming community.
+	Github: jamalzed		Tw: jamal_zedman	RH: Jamal
 */
 #ifndef QTYABAUSE_H
 #define QTYABAUSE_H
@@ -71,6 +77,14 @@ extern "C"
 #endif
 }
 
+// Since constexpr is only being used to declare char* constants in this file,
+// we can undefine it for compilers that are not Standard C++ 11 compliant.
+#if __cplusplus <= 199711L
+#ifndef constexpr
+#define constexpr
+#endif
+#endif
+
 #include <QString>
 #include <QMap>
 #include <QDateTime>
@@ -105,12 +119,13 @@ namespace QtYabause
 		QString Cartridge();
 	};
 
-	struct QtYabauseError
+	// This struct is unused anywhere in the code and just creates an error compiling due to the non-static initialization
+	/*struct QtYabauseError
 	{
 		int ErrorType;
 		QString ErrorMessage;
 		QDateTime ErrorTimestamp = QDateTime::currentDateTime();
-	};
+	};*/
 
 	void appendLog( const char* str );
 	UIYabause* mainWindow( bool create = true );
