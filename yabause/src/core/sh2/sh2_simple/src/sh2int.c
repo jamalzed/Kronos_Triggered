@@ -769,9 +769,12 @@ static void FASTCALL SH2div1(SH2_struct * sh)
 
 static void FASTCALL SH2dmuls(SH2_struct * sh)
 {
+#if 0
    u32 RnL,RnH,RmL,RmH,Res0,Res1,Res2;
    u32 temp0,temp1,temp2,temp3;
    s32 tempm,tempn,fnLmL;
+#endif
+
    s32 m = INSTRUCTION_C(sh->instruction);
    s32 n = INSTRUCTION_B(sh->instruction);
 
@@ -3130,7 +3133,7 @@ void SH2InterpreterSendInterrupt(SH2_struct *context, u8 vector, u8 level)
 
 void SH2InterpreterRemoveInterrupt(SH2_struct *context, u8 vector, u8 level) {
   u32 i, i2;
-  interrupt_struct tmp;
+  //interrupt_struct tmp;
   int hit = -1;
 
   for (i = 0; i < context->NumberOfInterrupts; i++) {
