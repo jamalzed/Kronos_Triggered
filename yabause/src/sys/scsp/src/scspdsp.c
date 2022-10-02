@@ -17,8 +17,13 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+// #define YPROF_SCSP
+
 #include "scsp.h"
 #include "scspdsp.h"
+#ifdef YPROF_SCSP
+#include "yabprof.h"
+#endif
 
 s32 float_to_int(u16 f_val);
 u16 int_to_float(u32 i_val);
@@ -35,9 +40,8 @@ static INLINE s32 saturate_24(s32 value)
    return value;
 }
 
-
 #define sign_x_to_s32(_bits, _value) (((int)((u32)(_value) << (32 - _bits))) >> (32 - _bits))
-#define min(a,b) (a<b)?a:b
+#define min_dsp(a,b) (a<b)?a:b
 
 static INLINE unsigned clz(u32 v)
 {
@@ -65,7 +69,7 @@ static INLINE unsigned clz(u32 v)
 
 void ScspDspExec(ScspDsp* dsp, int addr, u8 * sound_ram)
 {
-  u16* sound_ram_16 = (u16*)sound_ram;
+  u16* sound_ram_16;
   u64 mul_temp = 0;
   int nofl = 0;
   u32 x_temp = 0;
@@ -73,11 +77,26 @@ void ScspDspExec(ScspDsp* dsp, int addr, u8 * sound_ram)
   union ScspDspInstruction inst;
   u32 address = 0;
   s32 shift_temp = 0;
+  s32 SGAOutput;
+  int ShifterOutput;
+  // consts
+  int INPUTS;
+  int TEMP;
+  int X_SEL_Inputs[2];
+  u16 Y_SEL_Inputs[4];
+  u32 SGA_Inputs[2]; // ToDO:?
+  unsigned TEMPWriteAddr, TEMPReadAddr;
+
+#ifdef YPROF_SCSP
+  YPROF_INIT;
+#endif
+
+  sound_ram_16 = (u16*)sound_ram;
 
   inst.all = scsp_dsp.mpro[addr];
 
-  const unsigned TEMPWriteAddr = (inst.part.twa + dsp->mdec_ct) & 0x7F;
-  const unsigned TEMPReadAddr = (inst.part.tra + dsp->mdec_ct) & 0x7F;
+  TEMPWriteAddr = (inst.part.twa + dsp->mdec_ct) & 0x7F;
+  TEMPReadAddr = (inst.part.tra + dsp->mdec_ct) & 0x7F;
 
   if (inst.part.ira & 0x20) {
     if (inst.part.ira & 0x10) {
@@ -90,21 +109,24 @@ void ScspDspExec(ScspDsp* dsp, int addr, u8 * sound_ram)
     dsp->inputs = dsp->mems[inst.part.ira & 0x1F];
   }
 
-  const int INPUTS = sign_x_to_s32(24, dsp->inputs);
-  const int TEMP = sign_x_to_s32(24, dsp->temp[TEMPReadAddr]);
-  const int X_SEL_Inputs[2] = { TEMP, INPUTS };
-  const u16 Y_SEL_Inputs[4] = {
-    dsp->frc_reg, dsp->coef[inst.part.coef],
-    (u16)((dsp->y_reg >> 11) & 0x1FFF),
-    (u16)((dsp->y_reg >> 4) & 0x0FFF)
-  };
-  const u32 SGA_Inputs[2] = { (u32)TEMP, dsp->shift_reg }; // ToDO:?
+  // consts
+  INPUTS = sign_x_to_s32(24, dsp->inputs);
+  TEMP = sign_x_to_s32(24, dsp->temp[TEMPReadAddr]);
+  
+  X_SEL_Inputs[0] = TEMP;
+  X_SEL_Inputs[1] = INPUTS;
+
+  Y_SEL_Inputs[0] = dsp->frc_reg;
+  Y_SEL_Inputs[1] = dsp->coef[inst.part.coef];
+  Y_SEL_Inputs[2] = (u16)((dsp->y_reg >> 11) & 0x1FFF);
+  Y_SEL_Inputs[3] = (u16)((dsp->y_reg >> 4) & 0x0FFF);
+  
+  SGA_Inputs[0] = (u32)TEMP;
+  SGA_Inputs[1] = dsp->shift_reg; // ToDO:?
 
   if (inst.part.yrl) {
     dsp->y_reg = INPUTS & 0xFFFFFF;
   }
-
-  int ShifterOutput;
 
   ShifterOutput = (u32)sign_x_to_s32(26, dsp->shift_reg) << (inst.part.shift0 ^ inst.part.shift1);
 
@@ -132,8 +154,6 @@ void ScspDspExec(ScspDsp* dsp, int addr, u8 * sound_ram)
   }
 
   dsp->product = ((s64)sign_x_to_s32(13, Y_SEL_Inputs[inst.part.ysel]) * X_SEL_Inputs[inst.part.xsel]) >> 12;
-
-  s32 SGAOutput;
 
   SGAOutput = SGA_Inputs[inst.part.bsel];
 
@@ -198,6 +218,9 @@ void ScspDspExec(ScspDsp* dsp, int addr, u8 * sound_ram)
       dsp->adrs_reg = A_SEL_Inputs[inst.part.shift0 & inst.part.shift1];
     }
   }
+#ifdef YPROF_SCSP
+  YPROF("SCSPDSP");
+#endif
 }
 
 

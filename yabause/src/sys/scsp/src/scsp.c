@@ -88,7 +88,17 @@
 #include <stdarg.h>
 #include <math.h>
 #include <limits.h>
+#if !_MSC_VER || __INTEL_COMPILER
 #include <stdbool.h>
+#else
+#define _bool int
+#define _true 1
+#define _false 0
+
+#define bool _bool
+#define true _true
+#define false _false
+#endif
 
 #include "cs2.h"
 #include "debug.h"
@@ -1821,6 +1831,7 @@ void scsp_check_interrupt() {
   unsigned mask_test;
   unsigned lvmasked[3];
   unsigned level = 0;
+  unsigned i;
 
   mask_test = scsp.scipd & scsp.scieb;
   if (mask_test &~0xFF)
@@ -1830,7 +1841,7 @@ void scsp_check_interrupt() {
   lvmasked[1] = (scsp.scilv1 & mask_test) << 1;
   lvmasked[2] = (scsp.scilv2 & mask_test) << 2;
 
-  for (unsigned i = 0; i < 8; i++)
+  for (i = 0; i < 8; i++)
   {
     unsigned l = (lvmasked[0] & 0x1) | (lvmasked[1] & 0x2) | (lvmasked[2] & 0x4);
 
@@ -1930,13 +1941,15 @@ scsp_dma (void)
 {
   if (scsp.dmfl & 0x20)
     {
+      u32 i;
+	  u32 from = scsp.dmea;
+      u32 to = scsp.drga;
+      u32 cnt = scsp.dmlen>>1;
+
       // dsp -> scsp_ram
       SCSPLOG ("scsp dma: scsp_ram(%08lx) <- reg(%08lx) * %08lx\n",
                scsp.dmea, scsp.drga, scsp.dmlen);
-      u32 from = scsp.dmea;
-      u32 to = scsp.drga;
-      u32 cnt = scsp.dmlen>>1;
-      for (int i = 0; i < cnt; i++) {
+      for (i = 0; i < cnt; i++) {
         u16 val = scsp_r_w(NULL, NULL, from);
         //if (scsp.dmfl & 0x40) val = 0;
         SoundRamWriteWord(NULL, SoundRam, to, val);
@@ -1947,13 +1960,15 @@ scsp_dma (void)
     }
   else
     {
+      u32 i;
+	  u32 from = scsp.dmea;
+      u32 to = scsp.drga;
+      u32 cnt = scsp.dmlen>>1;
+
       // scsp_ram -> dsp
       SCSPLOG ("scsp dma: scsp_ram(%08lx) -> reg(%08lx) * %08lx\n",
                scsp.dmea, scsp.drga, scsp.dmlen);
-      u32 from = scsp.dmea;
-      u32 to = scsp.drga;
-      u32 cnt = scsp.dmlen>>1;
-      for (int i = 0; i < cnt; i++) {
+      for (i = 0; i < cnt; i++) {
         u16 val = SoundRamReadWord(NULL, SoundRam, from);
         //if (scsp.dmfl & 0x40) val = 0;
         scsp_w_w(NULL, NULL, to,val);
@@ -2776,14 +2791,14 @@ scsp_set_b (u32 a, u8 d)
 
     case 0x1E: // SCIEB(high byte)
     {
-      int i;
+      //int i;
       scsp.scieb = (scsp.scieb & 0xFF) | (d << 8);
       scsp_check_interrupt();
       return;
     }
     case 0x1F: // SCIEB(low byte)
     {
-      int i;
+      //int i;
       scsp.scieb = (scsp.scieb & 0x700) | d;
       scsp_check_interrupt();
       return;
@@ -4334,7 +4349,7 @@ scsp_r_b (SH2_struct *context, UNUSED u8* m, u32 a)
     }
   else if (a >= 0xEC0 && a <= 0xEDF){
     u16 val = scsp_dsp.efreg[ (a>>1) & 0x1F];
-    if( a&0x01 == 0){
+    if( (a&0x01) == 0){
       return val >> 8;
     }else{
       return val & 0xFF;
@@ -4797,8 +4812,8 @@ scu_interrupt_handler (void)
 u8 FASTCALL
 SoundRamReadByte (SH2_struct *context, u8* mem, u32 addr)
 {
-  addr &= 0x7FFFF;
   u8 val = 0;
+  addr &= 0x7FFFF;
 
   // If mem4b is set, mirror ram every 256k
   if (scsp.mem4b == 0)
@@ -4860,8 +4875,8 @@ void SyncSh2And68k(SH2_struct *context){
 u16 FASTCALL
 SoundRamReadWord (SH2_struct *context, u8* mem, u32 addr)
 {
-  addr &= 0xFFFFF;
   u16 val = 0;
+  addr &= 0xFFFFF;
 
   if (scsp.mem4b == 0)
     addr &= 0x1FFFF;
@@ -4900,9 +4915,9 @@ SoundRamWriteWord (SH2_struct *context, u8* mem, u32 addr, u16 val)
 u32 FASTCALL
 SoundRamReadLong (SH2_struct *context, u8* mem, u32 addr)
 {
-  addr &= 0xFFFFF;
   u32 val;
   u32 pre_cycle = m68kcycle;
+  addr &= 0xFFFFF;
 
   // If mem4b is set, mirror ram every 256k
   if (scsp.mem4b == 0)
@@ -5345,16 +5360,15 @@ u64 newCycles = 0;
 
 void* ScspAsynMainCpu( void * p ){
 
+  const int samplecnt = 256; // 11289600/44100
+  int frame = 0;
+  u64 cycleRequest = 0;
+  u64 m68k_inc = 0; //how much remaining samples should be played
 
 #if defined(ARCH_IS_LINUX)
   setpriority( PRIO_PROCESS, 0, -20);
 #endif
   YabThreadSetCurrentThreadAffinityMask( 0x03 );
-
-  const int samplecnt = 256; // 11289600/44100
-  int frame = 0;
-  u64 cycleRequest = 0;
-  u64 m68k_inc = 0; //how much remaining samples should be played
 
   while (thread_running)
   {
@@ -5421,13 +5435,14 @@ void ScspAsynMainRT( void * p ){
   int frame = 0;
   int frame_count = 0;
   int i;
+  int sleeptime = 0;
+  u64 checktime = 0;
 
+  u32 wait_clock = 0;
   const u32 base_clock = (u32)((644.8412698 / ((double)samplecnt / (double)step)) * (1 << CLOCK_SYNC_SHIFT));
-
 
   YabThreadSetCurrentThreadAffinityMask( 0x03 );
   before = YabauseGetTicks() * 1000000 / yabsys.tickfreq;
-  u32 wait_clock = 0;
   while (thread_running){
 
     framecnt = (11289600/fps) / frame_div;
@@ -5455,8 +5470,8 @@ void ScspAsynMainRT( void * p ){
         ScspExecAsync();
         frame_count = 0;
       }
-      int sleeptime = 0;
-      u64 checktime = 0;
+      sleeptime = 0;
+      checktime = 0;
       m68kcycle = 0;
       sh2_read_req = 0;
       do {
@@ -5765,7 +5780,9 @@ M68KClearCodeBreakpoints ()
 int SoundSaveState(void ** stream)
 {
   int i;
+#ifndef IMPROVED_SAVESTATES
   u32 temp;
+#endif
   int offset;
   u8 nextphase;
 
@@ -6078,7 +6095,9 @@ int SoundSaveState(void ** stream)
 int SoundLoadState (const void * stream, int version, int size)
 {
   int i, i2;
+#ifndef IMPROVED_SAVESTATES
   u32 temp;
+#endif
   u8 nextphase;
   IOCheck_struct check = { 0, 0 };
 
