@@ -1046,99 +1046,185 @@ struct RBGUniform {
 };
 
 class RBGGenerator{
-  GLuint prg_rbg_0_2w_bitmap_4bpp_ = 0;
-  GLuint prg_rbg_0_2w_bitmap_8bpp_ = 0;
-  GLuint prg_rbg_0_2w_bitmap_16bpp_p_ = 0;
-  GLuint prg_rbg_0_2w_bitmap_16bpp_ = 0;
-  GLuint prg_rbg_0_2w_bitmap_32bpp_ = 0;
-  GLuint prg_rbg_0_2w_p1_4bpp_ = 0;
-  GLuint prg_rbg_0_2w_p2_4bpp_ = 0;
-  GLuint prg_rbg_0_2w_p1_8bpp_ = 0;
-  GLuint prg_rbg_0_2w_p2_8bpp_ = 0;
-  GLuint prg_rbg_0_2w_p1_16bpp_p_ = 0;
-  GLuint prg_rbg_0_2w_p2_16bpp_p_ = 0;
-  GLuint prg_rbg_0_2w_p1_16bpp_ = 0;
-  GLuint prg_rbg_0_2w_p2_16bpp_ = 0;
-  GLuint prg_rbg_0_2w_p1_32bpp_ = 0;
-  GLuint prg_rbg_0_2w_p2_32bpp_ = 0;
+  GLuint prg_rbg_0_2w_bitmap_4bpp_;
+  GLuint prg_rbg_0_2w_bitmap_8bpp_;
+  GLuint prg_rbg_0_2w_bitmap_16bpp_p_;
+  GLuint prg_rbg_0_2w_bitmap_16bpp_;
+  GLuint prg_rbg_0_2w_bitmap_32bpp_;
+  GLuint prg_rbg_0_2w_p1_4bpp_;
+  GLuint prg_rbg_0_2w_p2_4bpp_;
+  GLuint prg_rbg_0_2w_p1_8bpp_;
+  GLuint prg_rbg_0_2w_p2_8bpp_;
+  GLuint prg_rbg_0_2w_p1_16bpp_p_;
+  GLuint prg_rbg_0_2w_p2_16bpp_p_;
+  GLuint prg_rbg_0_2w_p1_16bpp_;
+  GLuint prg_rbg_0_2w_p2_16bpp_;
+  GLuint prg_rbg_0_2w_p1_32bpp_;
+  GLuint prg_rbg_0_2w_p2_32bpp_;
 
-  GLuint prg_rbg_1_2w_bitmap_4bpp_ = 0;
-  GLuint prg_rbg_1_2w_bitmap_8bpp_ = 0;
-  GLuint prg_rbg_1_2w_bitmap_16bpp_p_ = 0;
-  GLuint prg_rbg_1_2w_bitmap_16bpp_ = 0;
-  GLuint prg_rbg_1_2w_bitmap_32bpp_ = 0;
-  GLuint prg_rbg_1_2w_p1_4bpp_ = 0;
-  GLuint prg_rbg_1_2w_p2_4bpp_ = 0;
-  GLuint prg_rbg_1_2w_p1_8bpp_ = 0;
-  GLuint prg_rbg_1_2w_p2_8bpp_ = 0;
-	GLuint prg_rbg1_1_2w_p1_4bpp_ = 0;
-	GLuint prg_rbg1_1_2w_p2_4bpp_ = 0;
-	GLuint prg_rbg1_1_2w_p1_8bpp_ = 0;
-	GLuint prg_rbg1_1_2w_p2_8bpp_ = 0;
-  GLuint prg_rbg_1_2w_p1_16bpp_p_ = 0;
-  GLuint prg_rbg_1_2w_p2_16bpp_p_ = 0;
-  GLuint prg_rbg_1_2w_p1_16bpp_ = 0;
-  GLuint prg_rbg_1_2w_p2_16bpp_ = 0;
-  GLuint prg_rbg_1_2w_p1_32bpp_ = 0;
-  GLuint prg_rbg_1_2w_p2_32bpp_ = 0;
+  GLuint prg_rbg_1_2w_bitmap_4bpp_;
+  GLuint prg_rbg_1_2w_bitmap_8bpp_;
+  GLuint prg_rbg_1_2w_bitmap_16bpp_p_;
+  GLuint prg_rbg_1_2w_bitmap_16bpp_;
+  GLuint prg_rbg_1_2w_bitmap_32bpp_;
+  GLuint prg_rbg_1_2w_p1_4bpp_;
+  GLuint prg_rbg_1_2w_p2_4bpp_;
+  GLuint prg_rbg_1_2w_p1_8bpp_;
+  GLuint prg_rbg_1_2w_p2_8bpp_;
+	GLuint prg_rbg1_1_2w_p1_4bpp_;
+	GLuint prg_rbg1_1_2w_p2_4bpp_;
+	GLuint prg_rbg1_1_2w_p1_8bpp_;
+	GLuint prg_rbg1_1_2w_p2_8bpp_;
+  GLuint prg_rbg_1_2w_p1_16bpp_p_;
+  GLuint prg_rbg_1_2w_p2_16bpp_p_;
+  GLuint prg_rbg_1_2w_p1_16bpp_;
+  GLuint prg_rbg_1_2w_p2_16bpp_;
+  GLuint prg_rbg_1_2w_p1_32bpp_;
+  GLuint prg_rbg_1_2w_p2_32bpp_;
 
-  GLuint prg_rbg_2_2w_bitmap_4bpp_ = 0;
-  GLuint prg_rbg_2_2w_bitmap_8bpp_ = 0;
-  GLuint prg_rbg_2_2w_bitmap_16bpp_p_ = 0;
-  GLuint prg_rbg_2_2w_bitmap_16bpp_ = 0;
-  GLuint prg_rbg_2_2w_bitmap_32bpp_ = 0;
-  GLuint prg_rbg_2_2w_p1_4bpp_ = 0;
-  GLuint prg_rbg_2_2w_p2_4bpp_ = 0;
-  GLuint prg_rbg_2_2w_p1_8bpp_ = 0;
-  GLuint prg_rbg_2_2w_p2_8bpp_ = 0;
-  GLuint prg_rbg_2_2w_p1_16bpp_p_ = 0;
-  GLuint prg_rbg_2_2w_p2_16bpp_p_ = 0;
-  GLuint prg_rbg_2_2w_p1_16bpp_ = 0;
-  GLuint prg_rbg_2_2w_p2_16bpp_ = 0;
-  GLuint prg_rbg_2_2w_p1_32bpp_ = 0;
-  GLuint prg_rbg_2_2w_p2_32bpp_ = 0;
+  GLuint prg_rbg_2_2w_bitmap_4bpp_;
+  GLuint prg_rbg_2_2w_bitmap_8bpp_;
+  GLuint prg_rbg_2_2w_bitmap_16bpp_p_;
+  GLuint prg_rbg_2_2w_bitmap_16bpp_;
+  GLuint prg_rbg_2_2w_bitmap_32bpp_;
+  GLuint prg_rbg_2_2w_p1_4bpp_;
+  GLuint prg_rbg_2_2w_p2_4bpp_;
+  GLuint prg_rbg_2_2w_p1_8bpp_;
+  GLuint prg_rbg_2_2w_p2_8bpp_;
+  GLuint prg_rbg_2_2w_p1_16bpp_p_;
+  GLuint prg_rbg_2_2w_p2_16bpp_p_;
+  GLuint prg_rbg_2_2w_p1_16bpp_;
+  GLuint prg_rbg_2_2w_p2_16bpp_;
+  GLuint prg_rbg_2_2w_p1_32bpp_;
+  GLuint prg_rbg_2_2w_p2_32bpp_;
 
-  GLuint prg_rbg_3_2w_bitmap_4bpp_ = 0;
-  GLuint prg_rbg_3_2w_bitmap_8bpp_ = 0;
-  GLuint prg_rbg_3_2w_bitmap_16bpp_p_ = 0;
-  GLuint prg_rbg_3_2w_bitmap_16bpp_ = 0;
-  GLuint prg_rbg_3_2w_bitmap_32bpp_ = 0;
-  GLuint prg_rbg_3_2w_p1_4bpp_ = 0;
-  GLuint prg_rbg_3_2w_p2_4bpp_ = 0;
-  GLuint prg_rbg_3_2w_p1_8bpp_ = 0;
-  GLuint prg_rbg_3_2w_p2_8bpp_ = 0;
-  GLuint prg_rbg_3_2w_p1_16bpp_p_ = 0;
-  GLuint prg_rbg_3_2w_p2_16bpp_p_ = 0;
-  GLuint prg_rbg_3_2w_p1_16bpp_ = 0;
-  GLuint prg_rbg_3_2w_p2_16bpp_ = 0;
-  GLuint prg_rbg_3_2w_p1_32bpp_ = 0;
-  GLuint prg_rbg_3_2w_p2_32bpp_ = 0;
+  GLuint prg_rbg_3_2w_bitmap_4bpp_;
+  GLuint prg_rbg_3_2w_bitmap_8bpp_;
+  GLuint prg_rbg_3_2w_bitmap_16bpp_p_;
+  GLuint prg_rbg_3_2w_bitmap_16bpp_;
+  GLuint prg_rbg_3_2w_bitmap_32bpp_;
+  GLuint prg_rbg_3_2w_p1_4bpp_;
+  GLuint prg_rbg_3_2w_p2_4bpp_;
+  GLuint prg_rbg_3_2w_p1_8bpp_;
+  GLuint prg_rbg_3_2w_p2_8bpp_;
+  GLuint prg_rbg_3_2w_p1_16bpp_p_;
+  GLuint prg_rbg_3_2w_p2_16bpp_p_;
+  GLuint prg_rbg_3_2w_p1_16bpp_;
+  GLuint prg_rbg_3_2w_p2_16bpp_;
+  GLuint prg_rbg_3_2w_p1_32bpp_;
+  GLuint prg_rbg_3_2w_p2_32bpp_;
 
-  GLuint tex_surface_ = 0;
-  GLuint tex_surface_1 = 0;
-	GLuint tex_lncl_[2] = {0};
-  GLuint ssbo_vram_ = 0;
-  GLuint ssbo_cram_ = 0;
-	GLuint ssbo_rotwin_ = 0;
-  GLuint ssbo_window_ = 0;
-  GLuint ssbo_paraA_ = 0;
-	GLuint ssbo_alpha_ = 0;
-  int tex_width_ = 0;
-  int tex_height_ = 0;
+  GLuint tex_surface_;
+  GLuint tex_surface_1;
+	GLuint tex_lncl_[2]; // = {0};
+  GLuint ssbo_vram_;
+  GLuint ssbo_cram_;
+	GLuint ssbo_rotwin_;
+  GLuint ssbo_window_;
+  GLuint ssbo_paraA_;
+	GLuint ssbo_alpha_;
+  int tex_width_;
+  int tex_height_;
   static RBGGenerator * instance_;
-  GLuint scene_uniform = 0;
+  GLuint scene_uniform;
   RBGUniform uniform;
   int struct_size_;
 
-  void * mapped_vram = nullptr;
+  void * mapped_vram;
 
 protected:
   RBGGenerator() {
+	  int am;
+  prg_rbg_0_2w_bitmap_4bpp_ = 0;
+  prg_rbg_0_2w_bitmap_8bpp_ = 0;
+  prg_rbg_0_2w_bitmap_16bpp_p_ = 0;
+  prg_rbg_0_2w_bitmap_16bpp_ = 0;
+  prg_rbg_0_2w_bitmap_32bpp_ = 0;
+  prg_rbg_0_2w_p1_4bpp_ = 0;
+  prg_rbg_0_2w_p2_4bpp_ = 0;
+  prg_rbg_0_2w_p1_8bpp_ = 0;
+  prg_rbg_0_2w_p2_8bpp_ = 0;
+  prg_rbg_0_2w_p1_16bpp_p_ = 0;
+  prg_rbg_0_2w_p2_16bpp_p_ = 0;
+  prg_rbg_0_2w_p1_16bpp_ = 0;
+  prg_rbg_0_2w_p2_16bpp_ = 0;
+  prg_rbg_0_2w_p1_32bpp_ = 0;
+  prg_rbg_0_2w_p2_32bpp_ = 0;
+
+  prg_rbg_1_2w_bitmap_4bpp_ = 0;
+  prg_rbg_1_2w_bitmap_8bpp_ = 0;
+  prg_rbg_1_2w_bitmap_16bpp_p_ = 0;
+  prg_rbg_1_2w_bitmap_16bpp_ = 0;
+  prg_rbg_1_2w_bitmap_32bpp_ = 0;
+  prg_rbg_1_2w_p1_4bpp_ = 0;
+  prg_rbg_1_2w_p2_4bpp_ = 0;
+  prg_rbg_1_2w_p1_8bpp_ = 0;
+  prg_rbg_1_2w_p2_8bpp_ = 0;
+	prg_rbg1_1_2w_p1_4bpp_ = 0;
+	prg_rbg1_1_2w_p2_4bpp_ = 0;
+	prg_rbg1_1_2w_p1_8bpp_ = 0;
+	prg_rbg1_1_2w_p2_8bpp_ = 0;
+  prg_rbg_1_2w_p1_16bpp_p_ = 0;
+  prg_rbg_1_2w_p2_16bpp_p_ = 0;
+  prg_rbg_1_2w_p1_16bpp_ = 0;
+  prg_rbg_1_2w_p2_16bpp_ = 0;
+  prg_rbg_1_2w_p1_32bpp_ = 0;
+  prg_rbg_1_2w_p2_32bpp_ = 0;
+
+  prg_rbg_2_2w_bitmap_4bpp_ = 0;
+  prg_rbg_2_2w_bitmap_8bpp_ = 0;
+  prg_rbg_2_2w_bitmap_16bpp_p_ = 0;
+  prg_rbg_2_2w_bitmap_16bpp_ = 0;
+  prg_rbg_2_2w_bitmap_32bpp_ = 0;
+  prg_rbg_2_2w_p1_4bpp_ = 0;
+  prg_rbg_2_2w_p2_4bpp_ = 0;
+  prg_rbg_2_2w_p1_8bpp_ = 0;
+  prg_rbg_2_2w_p2_8bpp_ = 0;
+  prg_rbg_2_2w_p1_16bpp_p_ = 0;
+  prg_rbg_2_2w_p2_16bpp_p_ = 0;
+  prg_rbg_2_2w_p1_16bpp_ = 0;
+  prg_rbg_2_2w_p2_16bpp_ = 0;
+  prg_rbg_2_2w_p1_32bpp_ = 0;
+  prg_rbg_2_2w_p2_32bpp_ = 0;
+
+  prg_rbg_3_2w_bitmap_4bpp_ = 0;
+  prg_rbg_3_2w_bitmap_8bpp_ = 0;
+  prg_rbg_3_2w_bitmap_16bpp_p_ = 0;
+  prg_rbg_3_2w_bitmap_16bpp_ = 0;
+  prg_rbg_3_2w_bitmap_32bpp_ = 0;
+  prg_rbg_3_2w_p1_4bpp_ = 0;
+  prg_rbg_3_2w_p2_4bpp_ = 0;
+  prg_rbg_3_2w_p1_8bpp_ = 0;
+  prg_rbg_3_2w_p2_8bpp_ = 0;
+  prg_rbg_3_2w_p1_16bpp_p_ = 0;
+  prg_rbg_3_2w_p2_16bpp_p_ = 0;
+  prg_rbg_3_2w_p1_16bpp_ = 0;
+  prg_rbg_3_2w_p2_16bpp_ = 0;
+  prg_rbg_3_2w_p1_32bpp_ = 0;
+  prg_rbg_3_2w_p2_32bpp_ = 0;
+
+  tex_surface_ = 0;
+  tex_surface_1 = 0;
+  //tex_lncl_[2] = {0};
+  tex_lncl_[0] = 0;
+  tex_lncl_[1] = 0;
+  ssbo_vram_ = 0;
+  ssbo_cram_ = 0;
+  ssbo_rotwin_ = 0;
+  ssbo_window_ = 0;
+  ssbo_paraA_ = 0;
+  ssbo_alpha_ = 0;
+  tex_width_ = 0;
+  tex_height_ = 0;
+  scene_uniform = 0;
+  mapped_vram = nullptr;
+
     tex_surface_ = 0;
     tex_width_ = 0;
     tex_height_ = 0;
+
 	struct_size_ = sizeof(vdp2rotationparameter_struct);
-	int am = sizeof(vdp2rotationparameter_struct) % 16;
+	am = sizeof(vdp2rotationparameter_struct) % 16;
 	if (am != 0) {
 		struct_size_ += 16 - am;
 	}
@@ -2235,56 +2321,56 @@ DEBUGWIP("Init\n");
 			u32 start = 0;
 			u32 size = 0;
 			switch (VRAMNeedAnUpdate) {
-				case 0b0001:
+				case 1: //0b0001:
 						size = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b0010:
+				case 2: // 0b0010:
 						start = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 						size = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b0011:
+				case 3: // 0b0011:
 						size = 0x40000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b0100:
+				case 4: // 0b0100:
 						start = 0x40000<<(Vdp2Regs->VRSIZE>>15);
 						size = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b0101:
+				case 5: // 0b0101:
 					size = 0x60000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b0110:
+				case 6: // 0b0110:
 					start = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 					size = 0x40000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b0111:
+				case 7: // 0b0111:
 					size = 0x60000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1000:
+				case 8: // 0b1000:
 					start = 0x60000<<(Vdp2Regs->VRSIZE>>15);
 					size = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1001:
+				case 9: // 0b1001:
 					size = 0x80000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1010:
+				case 10: // 0b1010:
 					start = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 					size = 0x60000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1011:
+				case 11: // 0b1011:
 					size = 0x80000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1100:
+				case 12: // 0b1100:
 					start = 0x40000<<(Vdp2Regs->VRSIZE>>15);
 					size = 0x40000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1101:
+				case 13: // 0b1101:
 					size = 0x80000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1110:
+				case 14: // 0b1110:
 					start = 0x20000<<(Vdp2Regs->VRSIZE>>15);
 					size = 0x60000<<(Vdp2Regs->VRSIZE>>15);
 				break;
-				case 0b1111:
+				case 15: // 0b1111:
 					size = 0x80000<<(Vdp2Regs->VRSIZE>>15);
 				break;
 				default:

@@ -28,6 +28,7 @@
 #include "debug.h"
 #include "error.h"
 #include "vdp1_compute.h"
+#include "common_glshader.h"
 
 // #define __USE_OPENGL_DEBUG__
 
@@ -549,7 +550,7 @@ int YglCalcTextureQ(
 
 YglTextureManager * YglTMInit(unsigned int w, unsigned int h) {
 
-  GLuint error;
+//  GLuint error;
   YglTextureManager * tm;
   tm = (YglTextureManager *)malloc(sizeof(YglTextureManager));
   memset(tm, 0, sizeof(YglTextureManager));
@@ -642,8 +643,8 @@ static void YglTMRealloc(YglTextureManager * tm, unsigned int width, unsigned in
   GLuint new_textureID;
   GLuint new_pixelBufferID;
   unsigned int * new_texture;
-  GLuint error;
-  int dh;
+//  GLuint error;
+  unsigned int dh;
 
 #ifdef VDP1_TEXTURE_ASYNC
   if ((tm == YglTM_vdp1[0]) || (tm == YglTM_vdp1[1]))
@@ -870,7 +871,7 @@ void YglDestroy() {
 
 void YglGenerate() {
   int status;
-  GLuint error;
+//  GLuint error;
   float col[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 
   warning = 0;
@@ -985,12 +986,12 @@ static int YglDestroyWindowBuffer(){
 }
 static int YglGenerateWindowBuffer(){
 
-  int status;
-  GLuint error;
+  int i, status;
+//  GLuint error;
 
   YGLDEBUG("YglGenerateWindowBuffer: %d,%d\n", _Ygl->width, _Ygl->height);
   glGenTextures(enBGMAX, &_Ygl->window_fbotex[0]);
-  for (int i=0; i<enBGMAX; i++) {
+  for (i=0; i<enBGMAX; i++) {
     glBindTexture(GL_TEXTURE_2D, _Ygl->window_fbotex[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _Ygl->rwidth, _Ygl->rheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1043,14 +1044,14 @@ static int YglDestroyScreenBuffer(){
 }
 static int YglGenerateScreenBuffer(){
 
-  int status;
-  GLuint error;
+  int i, status;
+//  GLuint error;
   float col[4] = {0.0f,0.0f,0.0f,0.0f};
 
   YGLDEBUG("YglGenerateScreenBuffer: %d,%d\n", _Ygl->rwidth, _Ygl->rheight);
 
   glGenTextures(SPRITE, &_Ygl->screen_fbotex[0]);
-  for (int i=0; i<SPRITE; i++) {
+  for (i=0; i<SPRITE; i++) {
     glBindTexture(GL_TEXTURE_2D, _Ygl->screen_fbotex[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _Ygl->rwidth, _Ygl->rheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1137,14 +1138,14 @@ static int YglDestroyBackBuffer() {
   return 0;
 }
 static int YglGenerateBackBuffer(){
-  int status;
-  GLuint error;
+  int i, status;
+//  GLuint error;
   float col[4] = {0.0f,0.0f,0.0f,0.0f};
 
   YGLDEBUG("YglGenerateBackBuffer: %d,%d\n", _Ygl->width, _Ygl->height);
 
   glGenTextures(2, &_Ygl->back_fbotex[0]);
-  for (int i=0; i<2; i++) {
+  for (i=0; i<2; i++) {
     glBindTexture(GL_TEXTURE_2D, _Ygl->back_fbotex[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _Ygl->rwidth, _Ygl->rheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1177,14 +1178,14 @@ static int YglDestroyOriginalBuffer(){
   return 0;
 }
 static int YglGenerateOriginalBuffer(){
-  int status;
-  GLuint error;
+  int i, status;
+//  GLuint error;
   float col[4] = {0.0f,0.0f,0.0f,0.0f};
 
   YGLDEBUG("YglGenerateOriginalBuffer: %d,%d\n", _Ygl->width, _Ygl->height);
 
   glGenTextures(NB_RENDER_LAYER, &_Ygl->original_fbotex[0]);
-  for (int i=0; i<NB_RENDER_LAYER; i++) {
+  for (i=0; i<NB_RENDER_LAYER; i++) {
     glBindTexture(GL_TEXTURE_2D, _Ygl->original_fbotex[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _Ygl->width, _Ygl->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1237,13 +1238,14 @@ void deinitLevels(YglLevel * levels, int size) {
 
 void initLevels(YglLevel** levels, int size) {
   int i, j;
+  YglLevel* level;
 
   if ((*levels = (YglLevel *)malloc(sizeof(YglLevel) * (size))) == NULL){
     return;
   }
 
   memset(*levels,0,sizeof(YglLevel) * size );
-  YglLevel* level = *levels;
+  level = *levels;
   for(i = 0;i < size ;i++) {
     level[i].prgcurrent = 0;
     level[i].uclipcurrent = 0;
@@ -1267,7 +1269,7 @@ void initLevels(YglLevel** levels, int size) {
 extern int YglInitDrawFrameBufferShaders(int id, int CS);
 //////////////////////////////////////////////////////////////////////////////
 int YglInit(int width, int height, unsigned int depth) {
-  unsigned int i,j;
+  //unsigned int i,j;
   int maj, min;
   void * dataPointer=NULL;
   float col[4] = {0.0f,0.0f,0.0f,0.0f};
@@ -1417,6 +1419,49 @@ int YglInit(int width, int height, unsigned int depth) {
     abort();
   }
 
+#ifdef QUICK_SHADER
+  //#define hash_shader(mode,colormode, spritetype, screen_nb, condition, fb_mode)	PG_VDP2_DRAWFRAMEBUFF_NONE + 5*(14*spritetype+screen_nb)+condition
+  //  pgid += 5*(14*spritetype+screen_nb)+condition;
+
+
+/*	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 1, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 2, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 3, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 5, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE*/
+
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 7, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 8, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 9, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 3, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 5, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 1, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 11, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 12, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + 2, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+  
+/*	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,4,0,0,0), 0);	// 2144 - spritetype = 4									(mode, colormode, screen_nb, condition, fb_mode = 0)
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,4,1,3,3), 0);	// 2179 - spritetype = 4, screen_nb = 1, condition = 3, fb_mode = 3	(mode, colormode = 0)
+
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,1,4,2,0,1), 0);	// 6665 - colormode = 1, spritetype = 4, screen_nb = 2, fb_mode = 1
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,1,4,2,1,2), 0);	// 6670 - colormode = 1, spritetype = 4, screen_nb = 2, condition = 1, fb_mode = 2
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,1,4,0,2,3), 0);	// 6635 - colormode = 1, spritetype = 4, condition = 2, fb_mode = 3
+
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,4,0,1,1), 0);	// 2149 - spritetype = 4, screen_nb = 0, condition = 1, fb_mode = 1
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE, 0);	// PG_VDP2_DRAWFRAMEBUFF_NONE
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,0,3,2,2), 0);	// 1094 - screen_nb = 3, condition = 2, fb_mode = 2
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,0,5,1,1), 0);	// 1129 - screen_nb = 5, condition = 1, fb_mode = 1
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,0,1,3,3), 0);	// 1059 - screen_nb = 1, condition = 3, fb_mode = 3
+	
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,4,2,0,0), 0);	// 2184 - spritetype = 4, screen_nb = 2
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,5,12,1,1), 0);	// 2669 - spritetype = 5, screen_nb = 12, condition = 1, fb_mode = 1
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,5,10,2,2), 0);	// 2634 - pritetype = 5, screen_nb = 10, condition = 2, fb_mode = 2
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,4,5,1,1), 0);	// 2249 - spritetype = 4, screen_nb = 5, condition = 1, fb_mode = 1
+	YglInitDrawFrameBufferShaders(PG_VDP2_DRAWFRAMEBUFF_NONE + hash_shader(0,0,4,5,3,3), 0);	// 2259 - spritetype = 4, screen_nb = 5, condition = 3, fb_mode = 3
+*/
+
+#else
     YglInitDrawFrameBufferShaders(2144, 0);
     YglInitDrawFrameBufferShaders(2179, 0);
     YglInitDrawFrameBufferShaders(6665, 0);
@@ -1432,6 +1477,7 @@ int YglInit(int width, int height, unsigned int depth) {
     YglInitDrawFrameBufferShaders(2634, 0);
     YglInitDrawFrameBufferShaders(2249, 0);
     YglInitDrawFrameBufferShaders(2259, 0);
+#endif
 
   glBindFramebuffer(GL_FRAMEBUFFER, _Ygl->default_fbo );
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -1445,7 +1491,7 @@ int YglInit(int width, int height, unsigned int depth) {
 
 //////////////////////////////////////////////////////////////////////////////
 void YglDeInit(void) {
-   unsigned int i,j;
+   //unsigned int i,j;
 
    if (YglTM_vdp1[0] != NULL) YglTMDeInit(&YglTM_vdp1[0]);
    if (YglTM_vdp1[1] != NULL) YglTMDeInit(&YglTM_vdp1[1]);
@@ -1999,7 +2045,7 @@ int YglQuadGrowShading_tesselation_in(YglSprite * input, YglTexture * output, fl
   YglProgram *program;
   texturecoordinate_struct *tmp;
   float * vtxa;
-  int prg = -1;;
+  int prg = -1;
   float * pos;
 
   prg = input->blendmode;
@@ -2477,9 +2523,10 @@ void YglEraseWriteVDP1(int id) {
   float col[4] = {0.0};
   float meshcol[4] = {0.0};
   u16 color;
-  int priority;
+  //int priority;
   u32 alpha = 0;
   int status = 0;
+  int drawBuf[2] = {0};
   GLenum DrawBuffers[4]= {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
   if (_Ygl->vdp1FrameBuff[0] == 0) return;
   _Ygl->vdp1On[id] = 0;
@@ -2489,7 +2536,6 @@ void YglEraseWriteVDP1(int id) {
   // _Ygl->vdp1IsNotEmpty = 0;
 
   glBindFramebuffer(GL_FRAMEBUFFER, _Ygl->vdp1fbo);
-  int drawBuf[2] = {0};
   glGetIntegerv(GL_DRAW_BUFFER0, &drawBuf[0]);
   glGetIntegerv(GL_DRAW_BUFFER1, &drawBuf[1]);
   glDrawBuffers(2, (const GLenum*)&DrawBuffers[id*2]);
@@ -2529,8 +2575,8 @@ void YglEraseWriteVDP1(int id) {
 }
 
 void executeTMVDP1(int in, int out) {
-  YglUpdateVDP1FB();
   int switchTM = 0;
+  YglUpdateVDP1FB();
   if (_Ygl->needVdp1Render != 0){
     switchTM = 1;
     YglTmPush(YglTM_vdp1[in]);
@@ -2551,7 +2597,7 @@ void YglComposeVdp1(void) {
   executeTMVDP1(_Ygl->drawframe, _Ygl->drawframe);
 }
 //////////////////////////////////////////////////////////////////////////////
-void YglFrameChangeVDP1(){
+void YglFrameChangeVDP1(void){
   u32 current_drawframe = 0;
   executeTMVDP1(_Ygl->drawframe, _Ygl->readframe);
   current_drawframe = _Ygl->drawframe;
@@ -2612,12 +2658,12 @@ static int renderVDP1Level( YglLevel * level, int j, int* cprg, YglMatrix *mat, 
 void YglRenderVDP1(void) {
   YglLevel * level;
   GLuint cprg=0;
-  int i,j;
-  int status;
+  int j;
+  //int status;
   Vdp2 *varVdp2Regs = &Vdp2Lines[yabsys.LineCount];
   GLenum DrawBuffers[4]= {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
   //YabThreadLock(_Ygl->mutex);
-  YglMatrix m, *mat;
+  YglMatrix *mat; // , m;
   mat = &_Ygl->mtxModelView;
 
   glBindVertexArray(_Ygl->vao);
@@ -2735,7 +2781,7 @@ static void updateColorOffset(Vdp2 *varVdp2Regs) {
 }
 
 u8 * YglGetVDP2RegPointer(){
-  int error;
+  //int error;
   if (_Ygl->vdp2reg_tex == 0){
     glGenTextures(1, &_Ygl->vdp2reg_tex);
 
@@ -2771,10 +2817,11 @@ void YglSetVDP2Reg(u8 * pbuf, int start, int size){
 }
 
 void YglUpdateVdp2Reg() {
+  int i;
   int needupdate = 0;
   int size = sizeof(char);
   int step = (((Vdp2Lines[0].TVMD >> 6) & 0x3) == 3)?2:1;
-  for (int i = 0; i<_Ygl->rheight; i++) {
+  for (i = 0; i<_Ygl->rheight; i++) {
     Vdp2 *varVdp2Regs = &Vdp2Lines[i/step];
     u8 bufline[NB_VDP2_REG*4] = {0};
     updateColorOffset(varVdp2Regs);
@@ -2884,6 +2931,7 @@ void YglCheckFBSwitch(int sync) {
 
 int DrawVDP2Screen(Vdp2 *varVdp2Regs, int id) {
   YglLevel * level;
+  int j;
   int cprg = -1;
   int clear = 1;
   int ret = 0;
@@ -2896,7 +2944,7 @@ int DrawVDP2Screen(Vdp2 *varVdp2Regs, int id) {
   glActiveTexture(GL_TEXTURE3);
   glBindTexture(GL_TEXTURE_2D, _Ygl->window_fbotex[id]);
 
-  for (int j = 0; j < (level->prgcurrent + 1); j++)
+  for (j = 0; j < (level->prgcurrent + 1); j++)
   {
     if (level->prg[j].currentQuad != 0) {
       if (clear) glClearBufferfv(GL_COLOR, 0, col);
@@ -3064,7 +3112,8 @@ GLuint getVDP1fb(int id) {
 }
 
 void finishRender() {
-  for (int i=0; i<SPRITE; i++)
+  int i;
+  for (i=0; i<SPRITE; i++)
     YglReset(_Ygl->vdp2levels[i]);
   glViewport(_Ygl->originx, _Ygl->originy, GlWidth, GlHeight);
   glUseProgram(0);
@@ -3083,12 +3132,17 @@ void finishRender() {
 }
 
 void YglRender(Vdp2 *varVdp2Regs) {
+   int min = 8;
+   int oldPrio = 0;
+   int nbPrio = 0;
+   int minPrio = -1;
+   int allPrio = 0;
    GLuint cprg=0;
    GLuint srcTexture;
-   GLuint VDP1fb[2];
+   //GLuint VDP1fb[2];
    int nbPass = 0;
-   YglMatrix mtx;
-   YglMatrix dmtx;
+   //YglMatrix mtx;
+   //YglMatrix dmtx;
    unsigned int i,j;
    double w = 0;
    double h = 0;
@@ -3107,7 +3161,7 @@ void YglRender(Vdp2 *varVdp2Regs) {
    int win1_mode_draw= 0;
    int win_op_draw = 0;
    int drawScreen[enBGMAX];
-   SpriteMode mode;
+   //SpriteMode mode;
    GLenum DrawBuffers[8]= {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3,GL_COLOR_ATTACHMENT4,GL_COLOR_ATTACHMENT5,GL_COLOR_ATTACHMENT6,GL_COLOR_ATTACHMENT7};
    double dar = (double)GlWidth/(double)GlHeight;
    double par = 4.0/3.0;
@@ -3115,6 +3169,16 @@ void YglRender(Vdp2 *varVdp2Regs) {
    int Inth = (int)(floor((float)GlHeight/(float)_Ygl->height));
    int Int  = 1;
    int modeScreen = _Ygl->stretch;
+  int prioscreens[6] = {0};
+  int modescreens[7] = {0};
+  int useLineColorOffset[6] = {0};
+  int isRGB[7] = {0};
+  int isBlur[7] = {0};
+  int isPerline[8] = {0};
+  int isShadow[7] = {0};
+  int id = 0;
+  /* const */ int vdp2screens[6]; // = {RBG0, RBG1, NBG0, NBG1, NBG2, NBG3};
+
    #ifndef __LIBRETRO__
    if (yabsys.isRotated) par = 1.0/par;
    #endif
@@ -3202,14 +3266,7 @@ void YglRender(Vdp2 *varVdp2Regs) {
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, YglTM_vdp2->textureID);
 
-  int min = 8;
-  int oldPrio = 0;
-
-  int nbPrio = 0;
-  int minPrio = -1;
-  int allPrio = 0;
-
-  for (int i = 0; i < SPRITE; i++) {
+  for (i = 0; i < SPRITE; i++) {
     if (((i == RBG0) || (i == RBG1)) && (_Ygl->rbg_use_compute_shader)) {
       glViewport(0, 0, _Ygl->width, _Ygl->height);
       glScissor(0, 0, _Ygl->width, _Ygl->height);
@@ -3227,17 +3284,15 @@ void YglRender(Vdp2 *varVdp2Regs) {
     drawScreen[i] = DrawVDP2Screen(varVdp2Regs, i);
   }
 
-  const int vdp2screens[] = {RBG0, RBG1, NBG0, NBG1, NBG2, NBG3};
+  // const
+  vdp2screens[0] = RBG0;
+  vdp2screens[1] = RBG1;
+  vdp2screens[2] = NBG0;
+  vdp2screens[3] = NBG1;
+  vdp2screens[4] = NBG2;
+  vdp2screens[5] = NBG3;
 
-  int prioscreens[6] = {0};
-  int modescreens[7] = {0};
-  int useLineColorOffset[6] = {0};
-  int isRGB[7] = {0};
-  int isBlur[7] = {0};
-  int isPerline[8] = {0};
-  int isShadow[7] = {0};
   glDisable(GL_BLEND);
-  int id = 0;
 
   lncl[0] = (varVdp2Regs->LNCLEN >> 0)&0x1; //NBG0
   lncl[1] = (varVdp2Regs->LNCLEN >> 1)&0x1; //NBG1
@@ -3247,7 +3302,7 @@ void YglRender(Vdp2 *varVdp2Regs) {
   lncl[5] = (varVdp2Regs->LNCLEN >> 0)&0x1; //RBG1
   lncl[6] = (varVdp2Regs->LNCLEN >> 5)&0x1; //SPRITE
 
-  for (int j=0; j<6; j++) {
+  for (j=0; j<6; j++) {
     if (drawScreen[vdp2screens[j]] != 0) {
       if (((vdp2screens[j] == RBG0) ||(vdp2screens[j] == RBG1)) && (_Ygl->rbg_use_compute_shader)) {
         if (vdp2screens[j] == RBG0)
@@ -3280,7 +3335,7 @@ void YglRender(Vdp2 *varVdp2Regs) {
   isPerline[6] = 6;
   isPerline[7] = 7;
 
-  for (int i = 6; i < 8; i++) {
+  for (i = 6; i < 8; i++) {
     //Update dedicated sprite window and Color calculation window
     winS_draw |= WinS[i]<<i;
     winS_mode_draw |= WinS_mode[i]<<i;
@@ -3344,7 +3399,7 @@ void YglRender(Vdp2 *varVdp2Regs) {
 //////////////////////////////////////////////////////////////////////////////
 
 void YglReset(YglLevel level) {
-  unsigned int i,j;
+  int j;
   level.blendmode  = 0;
   level.prgcurrent = 0;
   level.uclipcurrent = 0;
@@ -3365,7 +3420,7 @@ void YglShowTexture(void) {
 }
 
 u32 * YglGetColorRamPointer(int line) {
-  int error;
+  int i; // , error;
   if (_Ygl->cram_tex == 0) {
     glGenTextures(1, &_Ygl->cram_tex);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -3376,7 +3431,7 @@ u32 * YglGetColorRamPointer(int line) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-   for (int i= 0; i<512; i++) {
+   for (i= 0; i<512; i++) {
      _Ygl->colupd_min_addr[i] = 0xFFFFFFFF ;
      _Ygl->colupd_max_addr[i] = 0x00000000;
    }
@@ -3436,8 +3491,9 @@ static void YglOnUpdateColorRamWordLine(u32 addr, int line) {
 }
 
 void YglDirtyColorRamWord() {
-  for (int l=0; l<512; l++) {
-    for (int i = 0; i < 0x1000; i += 2) {
+  int i, l;
+  for (l=0; l<512; l++) {
+    for (i = 0; i < 0x1000; i += 2) {
       YglOnUpdateColorRamWordLine(i,l);
     }
   }
@@ -3523,12 +3579,11 @@ static void updateColorRamLine(int lineStart, int start, int end)
 }
 
 void YglUpdateColorRam() {
-  int startUpdate = -1;
+  int l, startUpdate = -1, dirty = 0;
   //YabThreadLock(_Ygl->crammutex);
   glBindTexture(GL_TEXTURE_2D, _Ygl->cram_tex);
   glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-  int dirty = 0;
-  for (int l=0; l<yabsys.MaxLineCount-1; l++){
+  for (l=0; l<yabsys.MaxLineCount-1; l++){
     if ((Vdp2ColorRamUpdated[l] != 0) && (l!=0)) needToSync = 1;
     updateColorRamLine(l, _Ygl->colupd_min_addr[l], _Ygl->colupd_max_addr[l]);
     _Ygl->colupd_min_addr[l] = 0xFFFFFFFF;
@@ -3540,7 +3595,7 @@ void YglUpdateColorRam() {
 }
 
 u32 * YglGetLineColorScreenPointer(){
-  int error;
+  // int error;
   if (_Ygl->linecolorscreen_tex == 0){
     glGenTextures(1, &_Ygl->linecolorscreen_tex);
 
@@ -3606,8 +3661,8 @@ void YglSetWindow(int id) {
 
 //////////////////////////////////////////////////////////////////////////////
 u32* YglGetBackColorPointer() {
-  int status;
-  GLuint error;
+  //int status;
+  // GLuint error;
 
   YGLDEBUG("YglGetBackColorPointer: %d,%d", _Ygl->width, _Ygl->height);
 
@@ -3670,10 +3725,13 @@ void setupMaxSize() {
 //////////////////////////////////////////////////////////////////////////////
 
 void YglChangeResolution(int w, int h) {
+  int uh, uw, scale, par, upHeight, maxRes;
+  float ratio;
+  
   YglLoadIdentity(&_Ygl->mtxModelView);
   YglLoadIdentity(&_Ygl->rbgModelView);
-  float ratio = (float)w/(float)h;
-  int par = w/h;
+  ratio = (float)w/(float)h;
+  par = w/h;
   releaseVDP1FB();
        if (_Ygl->smallfbo != 0) {
          glDeleteFramebuffers(1, &_Ygl->smallfbo);
@@ -3702,15 +3760,17 @@ void YglChangeResolution(int w, int h) {
        glDeleteTextures(1, &_Ygl->upfbotex);
        _Ygl->upfbotex = 0;
      }
-     int scale = 1;
-     int upHeight = 4096;
-     int uh = h;
-     int uw = w;
+
+     scale = 1;
+     upHeight = 4096;
+     uh = h;
+     uw = w;
+
      if (_Ygl->vdp2wdensity / _Ygl->vdp2hdensity != 1.0) {
        uh = h * _Ygl->vdp2wdensity; //uniformize density
        uw = w * _Ygl->vdp2hdensity; //uniformize density
      }
-     int maxRes = GlHeight;
+     maxRes = GlHeight;
      switch (_Ygl->resolution_mode) {
        case RES_480p: //480p
           scale = floor(480.0/(float)uh);
@@ -3768,7 +3828,7 @@ void VIDOGLSync(){
 ///////////////////////////////////////////////////////////////////////////////
 // Per line operation
 u32 * YglGetPerlineBuf(void){
-  int error;
+  //int error;
   if (_Ygl->coloroffset_tex == 0){
     glGenTextures(1, &_Ygl->coloroffset_tex);
 

@@ -57,7 +57,7 @@ void YglEraseWriteCSVDP1(int id) {
 
   float col[4] = {0.0};
   u16 color;
-  int priority;
+  //int priority;
   u32 alpha = 0;
   int status = 0;
   if (_Ygl->vdp1_pbo == 0) return;
@@ -106,7 +106,7 @@ void YglCSRenderVDP1(void) {
   vdp1_compute();
 }
 
-void YglFrameChangeCSVDP1(){
+void YglFrameChangeCSVDP1(void){
   u32 current_drawframe = 0;
   YglCSRenderVDP1();
   current_drawframe = _Ygl->drawframe;
@@ -143,7 +143,8 @@ GLuint GetCSVDP1fb(int id) {
 }
 
 void finishCSRender() {
-  for (int i=0; i<SPRITE; i++)
+  int i;
+  for (i=0; i<SPRITE; i++)
     YglReset(_Ygl->vdp2levels[i]);
   glViewport(_Ygl->originx, _Ygl->originy, GlWidth, GlHeight);
   glUseProgram(0);
@@ -162,11 +163,9 @@ void finishCSRender() {
 }
 
 void YglCSRender(Vdp2 *varVdp2Regs) {
-   TRACE_RENDER("YglCSRender");
-
    GLuint cprg=0;
    GLuint srcTexture;
-   GLuint VDP1fb[2];
+   //GLuint VDP1fb[2];
    int nbPass = 0;
    unsigned int i,j;
    double w = 0;
@@ -186,7 +185,8 @@ void YglCSRender(Vdp2 *varVdp2Regs) {
    int win1_mode_draw= 0;
    int win_op_draw = 0;
    int drawScreen[enBGMAX];
-   SpriteMode mode;
+   int min = 8, oldPrio = 0, nbPrio = 0, minPrio = -1, allPrio = 0;
+   //SpriteMode mode;
    GLenum DrawBuffers[8]= {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3,GL_COLOR_ATTACHMENT4,GL_COLOR_ATTACHMENT5,GL_COLOR_ATTACHMENT6,GL_COLOR_ATTACHMENT7};
    double dar = (double)GlWidth/(double)GlHeight;
    double par = 4.0/3.0;
@@ -194,6 +194,18 @@ void YglCSRender(Vdp2 *varVdp2Regs) {
    int Inth = (int)(floor((float)GlHeight/(float)_Ygl->height));
    int Int  = 1;
    int modeScreen = _Ygl->stretch;
+  int prioscreens[6] = {0};
+  int modescreens[7] = {0};
+  int useLineColorOffset[6] = {0};
+  int isRGB[7] = {0};
+  int isBlur[7] = {0};
+  int isPerline[8] = {0};
+  int isShadow[7] = {0};
+  int id = 0;
+  int vdp2screens[6];
+
+   TRACE_RENDER("YglCSRender");
+
    #ifndef __LIBRETRO__
    if (yabsys.isRotated) par = 1.0/par;
    #endif
@@ -286,14 +298,7 @@ void YglCSRender(Vdp2 *varVdp2Regs) {
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, YglTM_vdp2->textureID);
 
-  int min = 8;
-  int oldPrio = 0;
-
-  int nbPrio = 0;
-  int minPrio = -1;
-  int allPrio = 0;
-
-  for (int i = 0; i < SPRITE; i++) {
+  for (i = 0; i < SPRITE; i++) {
     if (((i == RBG0) || (i == RBG1)) && (_Ygl->rbg_use_compute_shader)) {
       glViewport(0, 0, _Ygl->width, _Ygl->height);
       glScissor(0, 0, _Ygl->width, _Ygl->height);
@@ -311,17 +316,14 @@ void YglCSRender(Vdp2 *varVdp2Regs) {
     drawScreen[i] = DrawVDP2Screen(varVdp2Regs, i);
   }
 
-  const int vdp2screens[] = {RBG0, RBG1, NBG0, NBG1, NBG2, NBG3};
+  vdp2screens[0] = RBG0;
+  vdp2screens[1] = RBG1;
+  vdp2screens[2] = NBG0;
+  vdp2screens[3] = NBG1;
+  vdp2screens[4] = NBG2;
+  vdp2screens[5] = NBG3;
 
-  int prioscreens[6] = {0};
-  int modescreens[7] = {0};
-  int useLineColorOffset[6] = {0};
-  int isRGB[7] = {0};
-  int isBlur[7] = {0};
-  int isPerline[8] = {0};
-  int isShadow[7] = {0};
   glDisable(GL_BLEND);
-  int id = 0;
 
   lncl[0] = (varVdp2Regs->LNCLEN >> 0)&0x1; //NBG0
   lncl[1] = (varVdp2Regs->LNCLEN >> 1)&0x1; //NBG1
@@ -331,7 +333,7 @@ void YglCSRender(Vdp2 *varVdp2Regs) {
   lncl[5] = (varVdp2Regs->LNCLEN >> 0)&0x1; //RBG1
   lncl[6] = (varVdp2Regs->LNCLEN >> 5)&0x1; //SPRITE
 
-  for (int j=0; j<6; j++) {
+  for (j=0; j<6; j++) {
     if (drawScreen[vdp2screens[j]] != 0) {
       if (((vdp2screens[j] == RBG0) ||(vdp2screens[j] == RBG1)) && (_Ygl->rbg_use_compute_shader)) {
         if (vdp2screens[j] == RBG0)
@@ -364,7 +366,7 @@ void YglCSRender(Vdp2 *varVdp2Regs) {
   isPerline[6] = 6;
   isPerline[7] = 7;
 
-  for (int i = 6; i < 8; i++) {
+  for (i = 6; i < 8; i++) {
     //Update dedicated sprite window and Color calculation window
     winS_draw |= WinS[i]<<i;
     winS_mode_draw |= WinS_mode[i]<<i;

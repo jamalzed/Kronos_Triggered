@@ -169,10 +169,13 @@ int ErrorHandle(const char* name)
 
 static GLuint createProgram(int count, const GLchar** prg_strs) {
   GLint status;
-	int exactCount = 0;
+  int id, exactCount = 0;
+  GLint length;
+  GLchar *info;
+  GLuint program;
   GLuint result = glCreateShader(GL_COMPUTE_SHADER);
 
-  for (int id = 0; id < count; id++) {
+  for (id = 0; id < count; id++) {
 		if (prg_strs[id] != NULL) exactCount++;
 		else break;
 	}
@@ -181,23 +184,23 @@ static GLuint createProgram(int count, const GLchar** prg_strs) {
   glGetShaderiv(result, GL_COMPILE_STATUS, &status);
 
   if (status == GL_FALSE) {
-    GLint length;
     glGetShaderiv(result, GL_INFO_LOG_LENGTH, &length);
-    GLchar *info = (GLchar*)malloc(sizeof(GLchar) *length);
+    info = (GLchar*)malloc(sizeof(GLchar) *length);
     glGetShaderInfoLog(result, length, NULL, info);
     YuiMsg("[COMPILE] %s\n", info);
     free(info);
     abort();
   }
-  GLuint program = glCreateProgram();
+  program = glCreateProgram();
   glAttachShader(program, result);
   glLinkProgram(program);
   glDetachShader(program, result);
   glGetProgramiv(program, GL_LINK_STATUS, &status);
   if (status == GL_FALSE) {
     GLint length;
+	GLchar *info;
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
-    GLchar *info = (GLchar*)malloc(sizeof(GLchar) *length);
+    info = (GLchar*)malloc(sizeof(GLchar) *length);
     glGetProgramInfoLog(program, length, NULL, info);
     YuiMsg("[LINK] %s\n", info);
     free(info);
@@ -310,16 +313,18 @@ u8 cmdBuffer[2][0x80000];
 void vdp1GenerateBuffer_sync(vdp1cmd_struct* cmd, int id) {
 	int endcnt;
 	u32 dot;
+	u32 w, h;
+	u32 width;
 	int pos = (cmd->CMDSRCA * 8) & 0x7FFFF;
   u8 END = ((cmd->CMDPMOD & 0x80) != 0);
 	u8* buf = &cmdBuffer[id][0];
 	switch ((cmd->CMDPMOD >> 3) & 0x7) {
     case 0:
     case 1:
-			for(int h=0; h < MAX(1, cmd->h); h++) {
+			for(h=0; h < MAX(1, cmd->h); h++) {
 				endcnt = 0;
-				int width = (cmd->w==0)?1:cmd->w/2;
-				for(int w=0; w < width; w++)
+				width = (cmd->w==0)?1:cmd->w/2;
+				for(w=0; w < width; w++)
 				{
 					u32 addr1, addr2;
 					dot = Vdp1RamReadByte(NULL, Vdp1Ram, pos);
@@ -363,9 +368,9 @@ void vdp1GenerateBuffer_sync(vdp1cmd_struct* cmd, int id) {
 	    case 2:
 	    case 3:
 	    case 4:
-				for(int h=0; h < MAX(1, cmd->h); h++) {
+				for(h=0; h < MAX(1, cmd->h); h++) {
 					endcnt = 0;
-					for(int w = 0; w < MAX(1, cmd->w); w++)
+					for(w = 0; w < MAX(1, cmd->w); w++)
 					{
 						dot = Vdp1RamReadByte(NULL, Vdp1Ram, pos);
 						if ((!END) && (endcnt >= 2)) {
@@ -382,10 +387,9 @@ void vdp1GenerateBuffer_sync(vdp1cmd_struct* cmd, int id) {
 				}
 	    break;
 	    case 5:
-			for(int h=0; h < cmd->h; h++) {
+			for(h=0; h < cmd->h; h++) {
 				endcnt = 0;
-				for(int w = 0; w < cmd->w; w++)
-	    	{
+				for(w = 0; w < cmd->w; w++) {
 					u16 dot = Vdp1RamReadWord(NULL, Vdp1Ram, pos);
 					if ((!END) && (endcnt >= 2)) {
 						dot = 0x7FFF;
@@ -436,6 +440,7 @@ void vdp1GenerateBuffer(vdp1cmd_struct* cmd){
 #endif
 
 int vdp1_add(vdp1cmd_struct* cmd, int clipcmd) {
+	int i, j;
 	int minx = 1024;
 	int miny = 1024;
 	int maxx = 0;
@@ -444,6 +449,8 @@ int vdp1_add(vdp1cmd_struct* cmd, int clipcmd) {
 	int intersectX = -1;
 	int intersectY = -1;
 	int requireCompute = 0;
+
+	float Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
 
 	if (_Ygl->wireframe_mode != 0) {
 		int pos = (cmd->CMDSRCA * 8) & 0x7FFFF;
@@ -494,14 +501,14 @@ int vdp1_add(vdp1cmd_struct* cmd, int clipcmd) {
 			}
 		}
 
-	  float Ax = cmd->CMDXA;
-		float Ay = cmd->CMDYA;
-		float Bx = cmd->CMDXB;
-		float By = cmd->CMDYB;
-		float Cx = cmd->CMDXC;
-		float Cy = cmd->CMDYC;
-		float Dx = cmd->CMDXD;
-		float Dy = cmd->CMDYD ;
+	  Ax = cmd->CMDXA;
+		Ay = cmd->CMDYA;
+		Bx = cmd->CMDXB;
+		By = cmd->CMDYB;
+		Cx = cmd->CMDXC;
+		Cy = cmd->CMDYC;
+		Dx = cmd->CMDXD;
+		Dy = cmd->CMDYD ;
 
 	  minx = (Ax < Bx)?Ax:Bx;
 	  miny = (Ay < By)?Ay:By;
@@ -533,9 +540,9 @@ int vdp1_add(vdp1cmd_struct* cmd, int clipcmd) {
 
 	}
 	memcpy(&cmdVdp1List[nbCmdToProcess], cmd, sizeof(vdp1cmd_struct));
-  for (int i = 0; i<NB_COARSE_RAST_X; i++) {
+  for (i = 0; i<NB_COARSE_RAST_X; i++) {
     int blkx = i * (tex_width/NB_COARSE_RAST_X);
-    for (int j = 0; j<NB_COARSE_RAST_Y; j++) {
+    for (j = 0; j<NB_COARSE_RAST_Y; j++) {
       int blky = j*(tex_height/NB_COARSE_RAST_Y);
       if (!(blkx > maxx*_Ygl->vdp1wratio
         || (blkx + (tex_width/NB_COARSE_RAST_X)) < minx*_Ygl->vdp1wratio
@@ -701,11 +708,13 @@ int get_vdp1_mesh(int id) {
 }
 static int oldProg = -1;
 void vdp1_compute() {
-  GLuint error;
-	int progId = getProgramId();
-	int needRender = _Ygl->vdp1IsNotEmpty;
+  int i;
+  //GLuint error;
+  int progId = getProgramId();
+  int needRender = _Ygl->vdp1IsNotEmpty;
+  YglMatrix m, mat;
 
-  for (int i = 0; i < NB_COARSE_RAST; i++) {
+  for (i = 0; i < NB_COARSE_RAST; i++) {
     if (hasDrawingCmd[i] == 0) nbCmd[i] = 0;
     if (nbCmd[i] != 0) {
 			needRender = 1;
@@ -731,7 +740,7 @@ void vdp1_compute() {
 	oldProg = progId;
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_cmd_);
-	for (int i = 0; i < NB_COARSE_RAST; i++) {
+	for (i = 0; i < NB_COARSE_RAST; i++) {
 		if (nbCmd[i] != 0) {
 			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 4*i*QUEUE_SIZE, nbCmd[i]*sizeof(int), (void*)&cmdVdp1[QUEUE_SIZE*i]);
 		}
@@ -753,7 +762,6 @@ void vdp1_compute() {
 	glUniform2f(7, tex_ratiow, tex_ratioh);
 	glUniform2i(8, Vdp1Regs->systemclipX2, Vdp1Regs->systemclipY2);
 	glUniform4i(9, Vdp1Regs->userclipX1, Vdp1Regs->userclipY1, Vdp1Regs->userclipX2, Vdp1Regs->userclipY2);
-	YglMatrix m, mat;
 	YglLoadIdentity(&m);
   if (Vdp1Regs->TVMR & 0x02) {
     YglMatrix rotate, scale;
@@ -801,7 +809,8 @@ void vdp1_compute() {
 }
 
 void vdp1_compute_reset(void) {
-	for(int i = 0; i<NB_PRG; i++) {
+	int i;
+	for(i = 0; i<NB_PRG; i++) {
 		if(prg_vdp1[i] != 0) {
 			glDeleteProgram(prg_vdp1[i]);
 			prg_vdp1[i] = 0;

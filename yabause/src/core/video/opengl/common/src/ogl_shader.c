@@ -29,9 +29,11 @@
 #include "bicubic_shader.h"
 #include "scanline_shader.h"
 #include "common_glshader.h"
+#include "yabprof.h"
 
 #undef YGLLOG
-#define YGLLOG //YuiMsg
+#define YGLLOG printf
+//#define YGLLOG //YuiMsg
 
 #define ALIGN(A,B) (((A)%(B))? A + (B - ((A)%(B))) : A)
 
@@ -324,7 +326,7 @@ static void Ygl_useTmpBuffer(){
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saveFB);
   if (_Ygl->tmpfbo == 0) {
 
-    GLuint error;
+    //GLuint error;
     glGenTextures(1, &_Ygl->tmpfbotex);
     glBindTexture(GL_TEXTURE_2D, _Ygl->tmpfbotex);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -364,7 +366,7 @@ int Ygl_useUpscaleBuffer(void){
       up_scale = 1;
   }
   if (_Ygl->upfbo == 0) {
-    GLuint error;
+    //GLuint error;
     glGenTextures(1, &_Ygl->upfbotex);
     glBindTexture(GL_TEXTURE_2D, _Ygl->upfbotex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, up_scale*_Ygl->rwidth, up_scale*_Ygl->rheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -1241,6 +1243,7 @@ const GLchar * prg_input_e[PG_MAX][2];
 const GLchar * prg_input_g[PG_MAX][2];
 
 void initDrawShaderCode() {
+  int i, j, k, k1, l, m;
   int nbMode = 2;
 #if defined(_OGL3_)
   int maj, min;
@@ -1251,18 +1254,19 @@ void initDrawShaderCode() {
   }
 #endif
   initVDP2DrawCode(vdp2blit_gl_start_f, Yglprg_vdp2_drawfb_gl_cram_f, vdp2blit_gl_end_f, vdp2blit_gl_final_f);
+
   //VDP1 Programs
-  for (int m = 0; m<nbMode; m++) {
+  for (m = 0; m<nbMode; m++) {
     //Normal or tesselation mode
-    for (int i = 0; i<2; i++) {
+    for (i = 0; i<2; i++) {
        // MSB or not MSB
-      for (int j = 0; j<3; j++) {
+      for (j = 0; j<3; j++) {
        // Mesh, Mesh improve or None
-        for (int k = 0; k<2; k++) {
+        for (k = 0; k<2; k++) {
           //SPD or not
-          for (int k1 = 0; k1<2; k1++) {
+          for (k1 = 0; k1<2; k1++) {
             //END code or not
-            for (int l = 0; l<14; l++) {
+            for (l = 0; l<14; l++) {
               //7 color calculation mode
               int index = l+14*(k1+2*(k+2*(j+3*(i+2*m))));
               prg_input_f[index][0] = vdp1drawversion[m];
@@ -1371,16 +1375,17 @@ int YglInitDrawFrameBufferShaders(int id, int CS) {
 int Ygl_uniformVDP2DrawFramebuffer(float * offsetcol, int nb_screen, Vdp2* varVdp2Regs)
 {
    int arrayid;
+   int pgid;
 
-   int pgid = setupVDP2Prog(varVdp2Regs, nb_screen, 0);
-
-  arrayid = pgid - PG_VDP2_DRAWFRAMEBUFF_NONE;
+   pgid = setupVDP2Prog(varVdp2Regs, nb_screen, 0);
+   arrayid = pgid - PG_VDP2_DRAWFRAMEBUFF_NONE;
 
   if (_prgid[pgid] == 0) {
     if (YglInitDrawFrameBufferShaders(pgid, 0) != 0) {
       return -1;
     }
   }
+  
   GLUSEPROG(_prgid[pgid]);
 
   glEnableVertexAttribArray(0);
@@ -1398,6 +1403,7 @@ int Ygl_uniformVDP2DrawFramebuffer(float * offsetcol, int nb_screen, Vdp2* varVd
 
   glUniform1i(g_draw_framebuffer_uniforms[arrayid].idvdp1FrameBuffer, 9);
   glUniform1i(g_draw_framebuffer_uniforms[arrayid].idvdp1Mesh, 19);
+  
   return _prgid[pgid];
 }
 
@@ -1726,7 +1732,7 @@ void YglSetLineColorOffset(u32 * pbuf, int start, int size, int id){
 
 void YglUpdateLineColorOffset(int id){
   if (lineColOffBufdirty[id] !=0) {
-    u32* buf;
+    //u32* buf;
     lineColOffBufdirty[id] = 0;
     glBindTexture(GL_TEXTURE_2D, _Ygl->linecolorcoef_tex[id]);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _Ygl->rwidth, _Ygl->rheight, GL_RGBA, GL_UNSIGNED_BYTE, &lineColOffBuf[id][0]);
@@ -1745,6 +1751,14 @@ int YglBlitTexture(int* prioscreens, int* modescreens, int* isRGB, int * isBlur,
   int isRGB_val = 0;
   int isBlur_val = 0;
   int isShadow_val = 0;
+  int i, id = 0;
+  const int gltext[20] = {
+			GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5,
+			GL_TEXTURE6, GL_TEXTURE7, GL_TEXTURE8, GL_TEXTURE9, GL_TEXTURE10, GL_TEXTURE11,
+			GL_TEXTURE12, GL_TEXTURE13, GL_TEXTURE14, GL_TEXTURE15, GL_TEXTURE16, GL_TEXTURE17,
+			GL_TEXTURE18, GL_TEXTURE19  };
+  int useLnclRBG0 = 0;
+  int useLnclRBG1 = 0;
 
   float const vertexPosition[] = {
     1.0, -1.0f,
@@ -1767,8 +1781,7 @@ int YglBlitTexture(int* prioscreens, int* modescreens, int* isRGB, int * isBlur,
 
     glBindVertexArray(_Ygl->vao);
 
-    int id = 0;
-    for (int i=0; i<nbScreen; i++) {
+    for (i=0; i<nbScreen; i++) {
       if (prioscreens[i] != 0) {
         id++;
       }
@@ -1776,11 +1789,9 @@ int YglBlitTexture(int* prioscreens, int* modescreens, int* isRGB, int * isBlur,
 
     vdp2blit_prg = Ygl_uniformVDP2DrawFramebuffer(offsetcol, id, varVdp2Regs );
 
-
-  int gltext[20] = {GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5, GL_TEXTURE6, GL_TEXTURE7, GL_TEXTURE8, GL_TEXTURE9, GL_TEXTURE10, GL_TEXTURE11, GL_TEXTURE12, GL_TEXTURE13, GL_TEXTURE14, GL_TEXTURE15, GL_TEXTURE16, GL_TEXTURE17, GL_TEXTURE18, GL_TEXTURE19};
-  int useLnclRBG0 = 0;
-  int useLnclRBG1 = 0;
-  for (int i = 0; i< 6; i++) {
+  useLnclRBG0 = 0;
+  useLnclRBG1 = 0;
+  for (i = 0; i< 6; i++) {
     if (use_lncl_off[i] != 0) {
       if (use_lncl_off[i] == _Ygl->linecolorcoef_tex[0]) useLnclRBG0 |= 1;
       if (use_lncl_off[i] == _Ygl->linecolorcoef_tex[1]) useLnclRBG1 |= 1;
@@ -1788,12 +1799,12 @@ int YglBlitTexture(int* prioscreens, int* modescreens, int* isRGB, int * isBlur,
     }
   }
 
-  for(int i=0; i<7; i++) {
+  for(i=0; i<7; i++) {
     if (lncl[i] != 0) lncl_val |= 1<<i;
     if (isBlur[i] != 0) isBlur_val |= 1<<i;
   }
 
-  for(int i=0; i<7; i++) {
+  for(i=0; i<7; i++) {
     if (isRGB[i] != 0) isRGB_val |= 1<<i;
     if (isShadow[i] != 0) isShadow_val |= 1<<i;
   }
@@ -1898,7 +1909,7 @@ int YglBlitTexture(int* prioscreens, int* modescreens, int* isRGB, int * isBlur,
   glActiveTexture(GL_TEXTURE16);
   glBindTexture(GL_TEXTURE_2D, _Ygl->coloroffset_tex);
 
-  for (int i=0; i<nbScreen; i++) {
+  for (i=0; i<nbScreen; i++) {
     if (prioscreens[i] != 0) {
       glActiveTexture(gltext[i]);
       glBindTexture(GL_TEXTURE_2D, prioscreens[i]);
@@ -1935,13 +1946,14 @@ int YglBlitTexture(int* prioscreens, int* modescreens, int* isRGB, int * isBlur,
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   // Clean up
-  for (int i = 0; i<19; i++) {
+  for (i = 0; i<19; i++) {
     glActiveTexture(gltext[i]);
     glBindTexture(GL_TEXTURE_2D, 0);
   }
   glDisableVertexAttribArray(0);
   glDisableVertexAttribArray(1);
   glDisable(GL_BLEND);
+
 
   return 0;
 }
@@ -2474,6 +2486,9 @@ int YglBlitFramebuffer(u32 srcTexture, float w, float h, float dispw, float disp
     1.0f, 1.0f };
 
   float nbLines = h;//yabsys.IsPal?625.0f:525.0f;
+
+  u32 isRotated;
+
   if (_Ygl->stretch == 2) nbLines = height;
 
   if (_Ygl->upmode != UP_NONE) {
@@ -2598,9 +2613,9 @@ int YglBlitFramebuffer(u32 srcTexture, float w, float h, float dispw, float disp
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(0);
 #ifndef __LIBRETRO__
-  u32 isRotated = yabsys.isRotated;
+  isRotated = yabsys.isRotated;
 #else
-  u32 isRotated = 0;
+  isRotated = 0;
 #endif
   if (textureCoord_buf[isRotated] == 0)
      glGenBuffers(1, &textureCoord_buf[isRotated]);
@@ -2795,16 +2810,17 @@ int YglBlitMosaic(u32 srcTexture, float w, float h, GLfloat* matrix, int * mosai
 }
 
 void Ygl_prog_Destroy(void) {
+  int i,j;
   if (clear_prg != -1)      glDeleteProgram(clear_prg);       clear_prg = -1;
   if (winprio_prg != -1)    glDeleteProgram(winprio_prg);     winprio_prg = -1;
   if (vdp1_write_prg != -1) glDeleteProgram(vdp1_write_prg);  vdp1_write_prg = -1;
   if (vdp1_read_prg != -1)  glDeleteProgram(vdp1_read_prg);   vdp1_read_prg = -1;
   if (blit_prg != -1)       glDeleteProgram(blit_prg);        blit_prg = -1;
   if (mosaic_prg != -1)     glDeleteProgram(mosaic_prg);      mosaic_prg = -1;
-  for(int i = 0; i<PG_MAX; i++) {
+  for(i = 0; i<PG_MAX; i++) {
     if(_prgid[i] != 0) {
       glDeleteProgram(_prgid[i]);
-      for(int j = i+1; j<PG_MAX; j++)
+      for(j = i+1; j<PG_MAX; j++)
         if (_prgid[i] == _prgid[j]) _prgid[j] = 0;
       _prgid[i] = 0;
     }

@@ -819,10 +819,10 @@ int YglSetupWindow(YglProgram * prg);
 void Vdp2GenerateWindowInfo(Vdp2 *varVdp2Regs);
 
 void YglEraseWriteVDP1(int id);
-void YglFrameChangeVDP1();
+void YglFrameChangeVDP1(void);
 
 void YglEraseWriteCSVDP1(int id);
-void YglFrameChangeCSVDP1();
+void YglFrameChangeCSVDP1(void);
 
 extern void RBGGenerator_init(int width, int height);
 extern void RBGGenerator_resize(int width, int height);
