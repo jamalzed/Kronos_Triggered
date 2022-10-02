@@ -306,7 +306,7 @@ static void DoDynamicInit() {
 
 typedef struct YabBarrier_win32
 {
-  SYNCHRONIZATION_BARRIER barrier;
+  //SYNCHRONIZATION_BARRIER barrier; // Windows 8+ code
   CRITICAL_SECTION mutex;
   HANDLE empty;
   int capacity;
@@ -316,8 +316,8 @@ typedef struct YabBarrier_win32
 
 void YabThreadBarrierWait(YabBarrier *bar){
     int wait = 0;
-    if (bar == NULL) return;
     YabBarrier_win32 * pctx;
+    if (bar == NULL) return;
     pctx = (YabBarrier_win32 *)bar;
     //if (enterSynchronizationBarrier != NULL) {
     //  enterSynchronizationBarrier(&pctx->barrier, 0);
