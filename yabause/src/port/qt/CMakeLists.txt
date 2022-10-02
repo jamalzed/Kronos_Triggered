@@ -38,9 +38,32 @@ if(Qt5_FOUND)
         SET(QT_PLUGINS_DIR "${_qt5Core_install_prefix}/plugins")
     endif()
 
-else()
-	message(STATUS "NO Qt5_FOUND")
-	return ()
+else() 
+	set( QT_USE_QTCORE TRUE )
+	set( QT_USE_QTGUI TRUE )
+	set ( QT_USE_QTMULTIMEDIA TRUE )
+	if( YAB_WANT_OPENGL )
+		set( QT_USE_QTOPENGL TRUE )
+	endif()
+	if (WIN32)
+		set( QT_USE_QTMAIN TRUE )
+	endif()
+	
+	find_package(Qt4)
+
+	if (NOT QT4_FOUND)
+		message(STATUS "NO QT4_FOUND OR Qt5_FOUND")
+		return ()
+	endif ()
+
+	message (WARNING "Qt4 is deprecated. Support will be removed in the future.")
+
+	if (QT_QTMULTIMEDIA_FOUND)
+		add_definitions(-DHAVE_QT_MULTIMEDIA=1)
+	endif ()
+
+	# dunno what it does exactly ... but seem required
+	include( ${QT_USE_FILE} )
 endif()
 
 # qt resources file
@@ -48,8 +71,13 @@ set( kronos_qt_RESOURCES resources/resources.qrc )
 
 if ( WIN32 )
 	# Windows port libraries
-	set( kronos_qt_windows_LIBRARIES
-		vfw32 legacy_stdio_definitions.lib )
+	if(MSVC_VERSION LESS 1900)
+		set( kronos_qt_windows_LIBRARIES vfw32 )
+	else()
+		# include legacy_stdio_definitions.lib if Visual Studio 2015 or above
+		set( kronos_qt_windows_LIBRARIES
+			vfw32 legacy_stdio_definitions.lib )
+	endif()
 
 	# resources
 	set ( kronos_qt_windows_RESOURCES
@@ -61,9 +89,15 @@ if(APPLE)
     set(kronos_qt_macosx_LIBRARIES ${AUDIO_LIBRARY})
 endif()
 
+find_program(QMAKE_EXECUTABLE NAMES qmake HINTS "${QT_BINARY_DIR}" "${_qt5Core_install_prefix}" ENV QTDIR PATH_SUFFIXES bin)
+execute_process(COMMAND "${QMAKE_EXECUTABLE}" -query QT_VERSION OUTPUT_VARIABLE QT_VERSION)
+
+if(QT_VERSION VERSION_GREATER_EQUAL 5.10.0)
+	message("Qt version ${QT_VERSION} detected, will use the QT 5.10 and above compatible version of UIYabause.ui")
+
 # qt forms
 set( kronos_qt_FORMS
-	ui/UIYabause.ui
+	ui/UIYabause_new.ui
 	ui/UISettings.ui
 	ui/UIAbout.ui
 	ui/UICheats.ui
@@ -90,6 +124,39 @@ set( kronos_qt_FORMS
     ui/UIMemoryTransfer.ui
     ui/UIMemoryEditor.ui
     ui/UIMemorySearch.ui )
+else()
+	message("Qt version ${QT_VERSION} detected, will use the QT 5.9 and below compatible version of UIYabause.ui")
+
+# qt forms
+set( kronos_qt_FORMS
+	ui/UIYabause_old.ui
+	ui/UISettings.ui
+	ui/UIAbout.ui
+	ui/UICheats.ui
+	ui/UICheatAR.ui
+	ui/UICheatRaw.ui
+	ui/UICheatSearch.ui
+	ui/UIBackupRam.ui
+	ui/UIPortManager.ui
+	ui/UIPadSetting.ui
+	ui/UISTVSetting.ui
+	ui/UI3DControlPadSetting.ui
+    ui/UIWheelSetting.ui
+    ui/UIMissionStickSetting.ui
+    ui/UIDoubleMissionStickSetting.ui
+	ui/UIGunSetting.ui
+	ui/UIMouseSetting.ui
+    ui/UIDebugCPU.ui
+    ui/UIDebugSCSP.ui
+    ui/UIDebugSCSPDSP.ui
+    ui/UIDebugVDP1.ui
+    ui/UIDebugVDP2.ui
+    ui/UIDebugVDP2Viewer.ui
+    ui/UIHexInput.ui
+    ui/UIMemoryTransfer.ui
+    ui/UIMemoryEditor.ui
+    ui/UIMemorySearch.ui )
+endif()
 
 # pure C headers
 set( kronos_qt_HEADERS
@@ -196,6 +263,10 @@ if(Qt5_FOUND)
 	QT5_ADD_RESOURCES( kronos_qt_RCC_RESOURCES ${kronos_qt_RESOURCES} )
 	QT5_WRAP_UI( kronos_qt_UI_FORMS ${kronos_qt_FORMS} )
 	QT5_WRAP_CPP( kronos_qt_MOC_SOURCES ${kronos_qt_MOC_HEADERS} )
+else() 
+	QT4_ADD_RESOURCES( yabause_qt_RCC_RESOURCES ${kronos_qt_RESOURCES} )
+	QT4_WRAP_UI( yabause_qt_UI_FORMS ${kronos_qt_FORMS} )
+	QT4_WRAP_CPP( yabause_qt_MOC_SOURCES ${kronos_qt_MOC_HEADERS} )
 endif()
 
 set( kronos_qt_SOURCES ${kronos_qt_SOURCES} resources/icons/kronos.icns )
@@ -219,6 +290,15 @@ include_directories(
 	${Qt5Widgets_INCLUDE_DIRS}
 	${Qt5OpenGL_INCLUDE_DIRS}
 	${Qt5Multimedia_INCLUDE_DIRS} )
+else()
+include_directories(
+	.
+	${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/ui
+	${QT_INCLUDE_DIR}
+	${QT_QTCORE_INCLUDE_DIR}
+	${QT_QTGUI_INCLUDE_DIR}
+	${QT_QTOPENGL_INCLUDE_DIR} )
 endif()
 
 # APPLE // not necessary mac os x, but i don't care ;)
@@ -238,6 +318,8 @@ target_link_libraries( kronos-qt ${kronos_qt_windows_LIBRARIES} )
 target_link_libraries( kronos-qt ${kronos_qt_macosx_LIBRARIES} )
 if (Qt5_FOUND)
 	target_link_libraries( kronos-qt ${Qt5Widgets_LIBRARIES} ${Qt5OpenGL_LIBRARIES} ${Qt5Core_QTMAIN_LIBRARIES} ${Qt5Multimedia_LIBRARIES})
+else()
+	target_link_libraries( kronos-qt ${QT_LIBRARIES} )
 endif()
 
 yab_port_success(kronos-qt)
@@ -246,15 +328,17 @@ configure_file(kronos.desktop.in ${YAB_PORT_NAME}.desktop)
 if (WIN32)
 	install(TARGETS kronos-qt DESTINATION ".")
 	if (SDL_FOUND)
-		get_filename_component(SDL_BINARY_DIR ${SDL_LIBRARY} PATH)
-		install(DIRECTORY ${SDL_BINARY_DIR}/
+		cmake_path(CONVERT "${SDL_LIBRARY}" TO_NATIVE_PATH_LIST SDL_LIBRARY_WIN)
+		get_filename_component(SDL_BINARY_DIR "${SDL_LIBRARY_WIN}" PATH)
+		install(DIRECTORY "${SDL_BINARY_DIR}"
 			DESTINATION "."
 			FILES_MATCHING PATTERN "SDL.dll")
 	endif ()
 	if (SDL2_FOUND)
 		if (NOT MSYS2_BUILD)
-			get_filename_component(SDL2_BINARY_DIR ${SDL2_LIBRARY} PATH)
-			install(DIRECTORY ${SDL2_BINARY_DIR}/
+			cmake_path(CONVERT "${SDL2_LIBRARY}" TO_NATIVE_PATH_LIST SDL2_LIBRARY_WIN)
+			get_filename_component(SDL2_BINARY_DIR "${SDL2_LIBRARY_WIN}" PATH)
+			install(DIRECTORY "${SDL2_BINARY_DIR}"
 				DESTINATION "."
 				FILES_MATCHING PATTERN "SDL2.dll")
 		else ()
@@ -268,7 +352,7 @@ if (WIN32)
 		install(FILES ${QT_BINARY_DIR}/Qt5Widgets.dll DESTINATION ".")
 		install(FILES ${QT_BINARY_DIR}/Qt5Multimedia.dll DESTINATION ".")
 		install(FILES ${QT_BINARY_DIR}/Qt5Network.dll DESTINATION ".")
-		if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
+		if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 		    message("Adding Qt debug libs")
 			install(FILES ${QT_BINARY_DIR}/Qt5Cored.dll DESTINATION ".")
 			install(FILES ${QT_BINARY_DIR}/Qt5Guid.dll DESTINATION ".")
