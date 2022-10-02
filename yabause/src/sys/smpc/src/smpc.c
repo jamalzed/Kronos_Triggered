@@ -488,6 +488,7 @@ static void SmpcINTBACKPeripheral(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 static void SmpcINTBACK(void) {
+  int i;
   if (SmpcInternalVars->firstPeri == 1) {
      //in a continous mode.
       SmpcINTBACKPeripheral();
@@ -499,7 +500,7 @@ static void SmpcINTBACK(void) {
   if (SmpcRegs->IREG[0] != 0x0) {
       // Return non-peripheral data
       SmpcInternalVars->firstPeri = ((SmpcRegs->IREG[1] & 0x8) >> 3);
-      for(int i=0;i<31;i++) SmpcRegs->OREG[i] = 0xff;
+      for(i=0;i<31;i++) SmpcRegs->OREG[i] = 0xff;
       m_pmode = (SmpcRegs->IREG[0]>>4);
       SmpcINTBACKStatus();
       SmpcRegs->SR = 0x40 | (SmpcInternalVars->firstPeri << 5); // the low nibble is undefined(or 0xF)
@@ -826,6 +827,26 @@ u8 do_th_mode(u8 val)
 
 //////////////////////////////////////////////////////////////////////////////
 
+//acquiring megadrive id
+//world heroes perfect wants to find a saturn pad
+//id = 0xb
+u8 do_th_mode2(u8 val)
+{
+   switch (val & 0x40) {
+   case 0x40:
+      return 0x70 | ((PORTDATA2.data[3] & 0xF) & 0xc);
+      break;
+   case 0x00:
+      return 0x30 | ((PORTDATA2.data[2] >> 4) & 0xf);
+      break;
+   }
+
+   //should not happen
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void FASTCALL SmpcWriteByte(SH2_struct *context, u8* mem, u32 addr, u8 val) {
    u8 oldVal;
    if(!(addr & 0x1)) return;
@@ -917,6 +938,10 @@ void FASTCALL SmpcWriteByte(SH2_struct *context, u8* mem, u32 addr, u8 val) {
 			  if (PORTDATA2.data[1] == PERGUN && (val & 0x7F) == 0x7F)
 				  SmpcRegs->PDR[1] = PORTDATA2.data[2];
 			  break;
+		//th control mode (acquire id) **** PORT2 ADDITION ****
+		case 0x40:
+		       SmpcRegs->PDR[1] = do_th_mode2(val);
+		       break;
 		  case 0x60:
 			  switch (val & 0x60) {
 			  case 0x60: // 1st Data

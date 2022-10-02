@@ -1250,7 +1250,7 @@ static u8 getLRU(SH2_struct *context, u32 tag, u8 line) {
   return way;
 }
 
-static inline void CacheWriteThrough(SH2_struct *context, u8* mem, u32 addr, u32 val, u8 size) {
+static INLINE void CacheWriteThrough(SH2_struct *context, u8* mem, u32 addr, u32 val, u8 size) {
   switch(size) {
   case 1:
     WriteByteList[(addr >> 16) & 0xFFF](context, mem, addr, val);
@@ -1264,7 +1264,7 @@ static inline void CacheWriteThrough(SH2_struct *context, u8* mem, u32 addr, u32
   }
 }
 
-static inline void CacheWriteVal(SH2_struct *context, u32 addr, u32 val, u8 size ) {
+static INLINE void CacheWriteVal(SH2_struct *context, u32 addr, u32 val, u8 size ) {
   u8 line = (addr>>4)&0x3F;
   u32 tag = (addr>>10)&0x7FFFF;
   u8 byte = addr&0xF;
@@ -1392,12 +1392,13 @@ void disableCache(SH2_struct *context) {
 
 #ifdef USE_CACHE
 void CacheFetch(SH2_struct *context, u8* memory, u32 addr, u8 way) {
+  int i=0;
   u8 line = (addr>>4)&0x3F;
   u32 tag = (addr>>10)&0x7FFFF;
   UpdateLRU(context, line, way);
   context->tagWay[line][tag] = way;
   context->cacheTagArray[line][way] = tag;
-  for (int i=0; i<4; i++) {
+  for (i=0; i<4; i++) {
     u32 ret = ReadLongList[(addr >> 16) & 0xFFF](context, memory,(addr&(~0xF))|(i*4));
     CacheWriteVal(context, (addr&(~0xF))|(i*4), ret, 4);
     // printf("Fetch (%x) (%d)=%x\n", (addr&(~0xF))|(i*4), i, ret);
@@ -1410,6 +1411,7 @@ void CacheFetch(SH2_struct *context, u8* memory, u32 addr, u8 way) {
 }
 
 u8 CacheReadByte(SH2_struct *context,u8* memory, u32 addr) {
+  u8 ret;
   u8 line = (addr>>4)&0x3F;
   u32 tag = (addr>>10)&0x7FFFF;
   u8 byte = addr&0xF;
@@ -1417,7 +1419,7 @@ u8 CacheReadByte(SH2_struct *context,u8* memory, u32 addr) {
   if (byte + 1 > 16) CACHE_LOG("!!!!!!!!!!!!!!!! Warn out of line....\n");
   if ((way <= 0x3) && (context->cacheTagArray[line][way] == tag)) {
     UpdateLRU(context, line, way);
-    u8 ret = ReadByteList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
+    ret = ReadByteList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
 #ifdef CACHE_DEBUG
     if (ret != ReadByteList[(addr >> 16) & 0xFFF](context, memory, addr)) {
       YuiMsg("Read Byte addr %x from cache = %x (%x)\n", addr, ret, ReadByteList[(addr >> 16) & 0xFFF](context, memory, addr));
@@ -1429,7 +1431,7 @@ u8 CacheReadByte(SH2_struct *context,u8* memory, u32 addr) {
   }
   way = getLRU(context, tag, line);
   CacheFetch(context, memory, addr, way);
-  u8 ret = ReadByteList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
+  ret = ReadByteList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
 #ifdef CACHE_DEBUG
   if (ret != ReadByteList[(addr >> 16) & 0xFFF](context, memory, addr)) {
     YuiMsg("Read Byte addr %x out of cache = %x (%x)\n", addr, ret, ReadByteList[(addr >> 16) & 0xFFF](context, memory, addr));
@@ -1441,6 +1443,7 @@ u8 CacheReadByte(SH2_struct *context,u8* memory, u32 addr) {
 }
 
 u16 CacheReadWord(SH2_struct *context,u8* memory, u32 addr) {
+  u16 ret;
   u8 line = (addr>>4)&0x3F;
   u32 tag = (addr>>10)&0x7FFFF;
   u8 byte = (addr&0xF);
@@ -1448,7 +1451,7 @@ u16 CacheReadWord(SH2_struct *context,u8* memory, u32 addr) {
   if (byte + 2 > 16) CACHE_LOG("!!!!!!!!!!!!!!!! Warn out of line....\n");
   if ((way <= 0x3) && (context->cacheTagArray[line][way] == tag)) {
     UpdateLRU(context, line, way);
-    u16 ret = ReadWordList[(addr >> 16) & 0xFFF](context, context->cacheData[line][way],byte);
+    ret = ReadWordList[(addr >> 16) & 0xFFF](context, context->cacheData[line][way],byte);
 #ifdef CACHE_DEBUG
     if (ret != ReadWordList[(addr >> 16) & 0xFFF](context, memory, addr)) {
       YuiMsg("Read Word addr %x (%x) from of cache = %x (%x)\n", addr, (addr >> 16) & 0xFFF, ret, ReadWordList[(addr >> 16) & 0xFFF](context, memory, addr));
@@ -1460,7 +1463,7 @@ u16 CacheReadWord(SH2_struct *context,u8* memory, u32 addr) {
   }
   way = getLRU(context, tag, line);
   CacheFetch(context, memory, addr, way);
-  u16 ret = ReadWordList[(addr >> 16) & 0xFFF](context, context->cacheData[line][way],byte);
+  ret = ReadWordList[(addr >> 16) & 0xFFF](context, context->cacheData[line][way],byte);
 #ifdef CACHE_DEBUG
   if (ret != ReadWordList[(addr >> 16) & 0xFFF](context, memory, addr)) {
     YuiMsg("Read Word addr %x (%x) out of cache = %x (%x)\n", addr, (addr >> 16) & 0xFFF, ret, ReadWordList[(addr >> 16) & 0xFFF](context, memory, addr));
@@ -1472,6 +1475,7 @@ u16 CacheReadWord(SH2_struct *context,u8* memory, u32 addr) {
 }
 
 u32 CacheReadLong(SH2_struct *context,u8* memory, u32 addr) {
+  u32 ret;
   u8 line = (addr>>4)&0x3F;
   u32 tag = (addr>>10)&0x7FFFF;
   u8 byte = (addr&0xF);
@@ -1479,7 +1483,7 @@ u32 CacheReadLong(SH2_struct *context,u8* memory, u32 addr) {
   if (byte + 4 > 16) CACHE_LOG("!!!!!!!!!!!!!!!! Warn out of line....\n");
   if ((way <= 0x3) && (context->cacheTagArray[line][way] == tag)) {
     UpdateLRU(context, line, way);
-    u32 ret = ReadLongList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
+    ret = ReadLongList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
 #ifdef CACHE_DEBUG
     if (ret != ReadLongList[(addr >> 16) & 0xFFF](context, memory, addr)) {
       YuiMsg("Read Long addr %x from cache = %x (%x)\n", addr, ret, ReadLongList[(addr >> 16) & 0xFFF](context, memory, addr));
@@ -1491,7 +1495,7 @@ u32 CacheReadLong(SH2_struct *context,u8* memory, u32 addr) {
   }
   way = getLRU(context, tag, line);
   CacheFetch(context, memory, addr, way);
-  u32 ret = ReadLongList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
+  ret = ReadLongList[(addr >> 16) & 0xFFF](context,context->cacheData[line][way],byte);
 #ifdef CACHE_DEBUG
   if (ret != ReadLongList[(addr >> 16) & 0xFFF](context, memory, addr)) {
     YuiMsg("Read Long addr %x out of cache = %x (%x)\n", addr, ret, ReadLongList[(addr >> 16) & 0xFFF](context, memory, addr));
@@ -1505,10 +1509,14 @@ u32 CacheReadLong(SH2_struct *context,u8* memory, u32 addr) {
 
 void CacheInvalidate(SH2_struct *context,u32 addr){
 #ifdef USE_CACHE
+  u8 line;
+  u32 tag;
+  u8 way;
+
   if (yabsys.usecache == 0) return;
-  u8 line = (addr>>4)&0x3F;
-  u32 tag = (addr>>10)&0x7FFFF;
-  u8 way = context->tagWay[line][tag];
+  line = (addr>>4)&0x3F;
+  tag = (addr>>10)&0x7FFFF;
+  way = context->tagWay[line][tag];
   context->tagWay[line][tag] = 0x4;
   if (way <= 0x3) context->cacheTagArray[line][way] = 0x0;
   context->cacheLRU[line] = 0;
@@ -1517,9 +1525,11 @@ void CacheInvalidate(SH2_struct *context,u32 addr){
 
 u32 FASTCALL AddressArrayReadLong(SH2_struct *context,u32 addr) {
 #ifdef USE_CACHE
+  u8 line;
+  u8 way;
   if (yabsys.usecache == 0) return 0;
-  u8 line = (addr>>4)&0x3F;
-  u8 way = (context->onchip.CCR>>6)&0x3;
+  line = (addr>>4)&0x3F;
+  way = (context->onchip.CCR>>6)&0x3;
   return ((context->cacheLRU[line]&0x3F)<<4) | ((context->cacheTagArray[line][way]&0x7FFFF)<<10) | ((context->cacheTagArray[line][way]!= 0x0)<<1);
 #else
   return 0;
@@ -1530,11 +1540,13 @@ u32 FASTCALL AddressArrayReadLong(SH2_struct *context,u32 addr) {
 
 void FASTCALL AddressArrayWriteLong(SH2_struct *context,u32 addr, u32 val)  {
 #ifdef USE_CACHE
+  u8 line, valid, way;
+  u32 tag;
   if (yabsys.usecache == 0) return;
-  u8 line = (addr>>4)&0x3F;
-  u32 tag = (addr>>10)&0x7FFFF;
-  u8 valid = (addr>>2)&0x1;
-  u8 way = (context->onchip.CCR>>6)&0x3;
+  line = (addr>>4)&0x3F;
+  tag = (addr>>10)&0x7FFFF;
+  valid = (addr>>2)&0x1;
+  way = (context->onchip.CCR>>6)&0x3;
   context->cacheLRU[line] = (val>>4)&0x3F;
   if (valid) {
     context->tagWay[line][tag] = way;
@@ -1832,9 +1844,9 @@ int getEatClock(u32 src, u32 dst) {
 }
 
 void DMATransferCycles(SH2_struct *context, Dmac * dmac, int cycles ){
-   int size;
-   u32 i = 0;
-   int count;
+   //int size;
+   u32 i = 0, val;
+   //int count;
 
    //LOG("sh2 dma src=%08X,dst=%08X,%d type:%d cycle:%d\n", *dmac->SAR, *dmac->DAR, *dmac->TCR, ((*dmac->CHCR & 0x0C00) >> 10), cycles);
 
@@ -1912,7 +1924,7 @@ void DMATransferCycles(SH2_struct *context, Dmac * dmac, int cycles ){
             srcInc *= 4;
             while (dmac->copy_clock >= 0) {
               dmac->copy_clock -= eat;
-               u32 val = DMAMappedMemoryReadLong(*dmac->SAR);
+               val = DMAMappedMemoryReadLong(*dmac->SAR);
                //printf("CPU DMA src:%08X dst:%08X val:%08X\n", *SAR, *DAR, val);
 				       DMAMappedMemoryWriteLong(*dmac->DAR,val);
                *dmac->DAR += destInc;
@@ -1936,7 +1948,7 @@ void DMATransferCycles(SH2_struct *context, Dmac * dmac, int cycles ){
            srcInc *= 4;
            while (dmac->copy_clock >= 0) {
              dmac->copy_clock -= (eat>>2);
-             u32 val = DMAMappedMemoryReadLong(*dmac->SAR);
+             val = DMAMappedMemoryReadLong(*dmac->SAR);
              //printf("CPU DMA src:%08X dst:%08X val:%08X\n", *SAR, *DAR, val);
              DMAMappedMemoryWriteLong(*dmac->DAR, val);
              *dmac->DAR += destInc;

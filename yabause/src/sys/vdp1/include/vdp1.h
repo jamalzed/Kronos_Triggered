@@ -153,7 +153,6 @@ typedef struct
    int (*Init)(void);
    void (*DeInit)(void);
    void (*Resize)(int,int,unsigned int, unsigned int, int);
-   void (*getScale)(float *xRatio, float *yRatio);
    int (*IsFullscreen)(void);
    // VDP1 specific
    int (*Vdp1Reset)(void);

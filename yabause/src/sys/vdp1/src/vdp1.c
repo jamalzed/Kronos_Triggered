@@ -573,7 +573,8 @@ static void checkClipCmd(vdp1cmd_struct **sysClipCmd, vdp1cmd_struct **usrClipCm
 
 static int Vdp1NormalSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_framebuffer){
   Vdp2 *varVdp2Regs = &Vdp2Lines[0];
-  int ret = 1;
+  int ret = 1, i, area;
+
   if (emptyCmd(cmd)) {
     // damaged data
     yabsys.vdp1cycles += 70;
@@ -612,7 +613,7 @@ static int Vdp1NormalSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* 
   cmd->CMDXD = cmd->CMDXA;
   cmd->CMDYD = cmd->CMDYA + MAX(1,cmd->h);
 
-  int area = abs((cmd->CMDXA*cmd->CMDYB - cmd->CMDXB*cmd->CMDYA) + (cmd->CMDXB*cmd->CMDYC - cmd->CMDXC*cmd->CMDYB) + (cmd->CMDXC*cmd->CMDYD - cmd->CMDXD*cmd->CMDYC) + (cmd->CMDXD*cmd->CMDYA - cmd->CMDXA *cmd->CMDYD))/2;
+  area = abs((cmd->CMDXA*cmd->CMDYB - cmd->CMDXB*cmd->CMDYA) + (cmd->CMDXB*cmd->CMDYC - cmd->CMDXC*cmd->CMDYB) + (cmd->CMDXC*cmd->CMDYD - cmd->CMDXD*cmd->CMDYC) + (cmd->CMDXD*cmd->CMDYA - cmd->CMDXA *cmd->CMDYD))/2;
   switch ((cmd->CMDPMOD >> 3) & 0x7) {
     case 0:
     case 1:
@@ -634,7 +635,7 @@ static int Vdp1NormalSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* 
   if ((cmd->CMDPMOD & 4))
   {
     yabsys.vdp1cycles+= 232;
-    for (int i = 0; i < 4; i++){
+    for (i = 0; i < 4; i++){
       u16 color2 = Vdp1RamReadWord(NULL, ram, (Vdp1RamReadWord(NULL, ram, regs->addr + 0x1C) << 3) + (i << 1));
       cmd->G[(i << 2) + 0] = (float)((color2 & 0x001F)) / (float)(0x1F) - 0.5f;
       cmd->G[(i << 2) + 1] = (float)((color2 & 0x03E0) >> 5) / (float)(0x1F) - 0.5f;
@@ -650,7 +651,7 @@ static int Vdp1ScaledSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* 
   Vdp2 *varVdp2Regs = &Vdp2Lines[0];
   s16 rw = 0, rh = 0;
   s16 x, y;
-  int ret = 1;
+  int ret = 1, i, area;
 
   if (emptyCmd(cmd)) {
     // damaged data
@@ -770,7 +771,7 @@ static int Vdp1ScaledSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* 
 
 
 
-  int area = abs((cmd->CMDXA*cmd->CMDYB - cmd->CMDXB*cmd->CMDYA) + (cmd->CMDXB*cmd->CMDYC - cmd->CMDXC*cmd->CMDYB) + (cmd->CMDXC*cmd->CMDYD - cmd->CMDXD*cmd->CMDYC) + (cmd->CMDXD*cmd->CMDYA - cmd->CMDXA *cmd->CMDYD))/2;
+  area = abs((cmd->CMDXA*cmd->CMDYB - cmd->CMDXB*cmd->CMDYA) + (cmd->CMDXB*cmd->CMDYC - cmd->CMDXC*cmd->CMDYB) + (cmd->CMDXC*cmd->CMDYD - cmd->CMDXD*cmd->CMDYC) + (cmd->CMDXD*cmd->CMDYA - cmd->CMDXA *cmd->CMDYD))/2;
   switch ((cmd->CMDPMOD >> 3) & 0x7) {
     case 0:
     case 1:
@@ -793,7 +794,7 @@ static int Vdp1ScaledSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* 
   if ((cmd->CMDPMOD & 4))
   {
     yabsys.vdp1cycles+= 232;
-    for (int i = 0; i < 4; i++){
+    for (i = 0; i < 4; i++){
       u16 color2 = Vdp1RamReadWord(NULL, Vdp1Ram, (Vdp1RamReadWord(NULL, Vdp1Ram, regs->addr + 0x1C) << 3) + (i << 1));
       cmd->G[(i << 2) + 0] = (float)((color2 & 0x001F)) / (float)(0x1F) - 0.5f;
       cmd->G[(i << 2) + 1] = (float)((color2 & 0x03E0) >> 5) / (float)(0x1F) - 0.5f;
@@ -807,7 +808,7 @@ static int Vdp1ScaledSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* 
 
 static int Vdp1DistortedSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_framebuffer) {
   Vdp2 *varVdp2Regs = &Vdp2Lines[0];
-  int ret = 1;
+  int ret = 1, i, area;
 
   if (emptyCmd(cmd)) {
     // damaged data
@@ -843,7 +844,7 @@ static int Vdp1DistortedSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u
   cmd->CMDXD += regs->localX;
   cmd->CMDYD += regs->localY;
 
-  int area = abs((cmd->CMDXA*cmd->CMDYB - cmd->CMDXB*cmd->CMDYA) + (cmd->CMDXB*cmd->CMDYC - cmd->CMDXC*cmd->CMDYB) + (cmd->CMDXC*cmd->CMDYD - cmd->CMDXD*cmd->CMDYC) + (cmd->CMDXD*cmd->CMDYA - cmd->CMDXA *cmd->CMDYD))/2;
+  area = abs((cmd->CMDXA*cmd->CMDYB - cmd->CMDXB*cmd->CMDYA) + (cmd->CMDXB*cmd->CMDYC - cmd->CMDXC*cmd->CMDYB) + (cmd->CMDXC*cmd->CMDYD - cmd->CMDXD*cmd->CMDYC) + (cmd->CMDXD*cmd->CMDYA - cmd->CMDXA *cmd->CMDYD))/2;
   switch ((cmd->CMDPMOD >> 3) & 0x7) {
     case 0:
     case 1:
@@ -865,7 +866,7 @@ static int Vdp1DistortedSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u
   if ((cmd->CMDPMOD & 4))
   {
     yabsys.vdp1cycles+= 232;
-    for (int i = 0; i < 4; i++){
+    for (i = 0; i < 4; i++){
       u16 color2 = Vdp1RamReadWord(NULL, Vdp1Ram, (Vdp1RamReadWord(NULL, Vdp1Ram, regs->addr + 0x1C) << 3) + (i << 1));
       cmd->G[(i << 2) + 0] = (float)((color2 & 0x001F)) / (float)(0x1F) - 0.5f;
       cmd->G[(i << 2) + 1] = (float)((color2 & 0x03E0) >> 5) / (float)(0x1F) - 0.5f;
@@ -878,6 +879,7 @@ static int Vdp1DistortedSpriteDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u
 }
 
 static int Vdp1PolygonDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_framebuffer) {
+  int i, w, h;
   Vdp2 *varVdp2Regs = &Vdp2Lines[0];
 
   CONVERTCMD(cmd->CMDXA);
@@ -898,8 +900,8 @@ static int Vdp1PolygonDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_
   cmd->CMDXD += regs->localX;
   cmd->CMDYD += regs->localY;
 
-  int w = (sqrt((cmd->CMDXA - cmd->CMDXB)*(cmd->CMDXA - cmd->CMDXB)) + sqrt((cmd->CMDXD - cmd->CMDXC)*(cmd->CMDXD - cmd->CMDXC)))/2;
-  int h = (sqrt((cmd->CMDYA - cmd->CMDYD)*(cmd->CMDYA - cmd->CMDYD)) + sqrt((cmd->CMDYB - cmd->CMDYC)*(cmd->CMDYB - cmd->CMDYC)))/2;
+  w = (sqrt((cmd->CMDXA - cmd->CMDXB)*(cmd->CMDXA - cmd->CMDXB)) + sqrt((cmd->CMDXD - cmd->CMDXC)*(cmd->CMDXD - cmd->CMDXC)))/2;
+  h = (sqrt((cmd->CMDYA - cmd->CMDYD)*(cmd->CMDYA - cmd->CMDYD)) + sqrt((cmd->CMDYB - cmd->CMDYC)*(cmd->CMDYB - cmd->CMDYC)))/2;
   yabsys.vdp1cycles += MIN(1000, 16 + (w * h) + (w * 2));
 
   //gouraud
@@ -907,7 +909,7 @@ static int Vdp1PolygonDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_
   if ((cmd->CMDPMOD & 4))
   {
     yabsys.vdp1cycles+= 232;
-    for (int i = 0; i < 4; i++){
+    for (i = 0; i < 4; i++){
       u16 color2 = Vdp1RamReadWord(NULL, Vdp1Ram, (Vdp1RamReadWord(NULL, Vdp1Ram, regs->addr + 0x1C) << 3) + (i << 1));
       cmd->G[(i << 2) + 0] = (float)((color2 & 0x001F)) / (float)(0x1F) - 0.5f;
       cmd->G[(i << 2) + 1] = (float)((color2 & 0x03E0) >> 5) / (float)(0x1F) - 0.5f;
@@ -954,7 +956,8 @@ static int Vdp1PolylineDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back
   memset(cmd->G, 0, sizeof(float)*16);
   if ((cmd->CMDPMOD & 4))
   {
-    for (int i = 0; i < 4; i++){
+	int i;
+    for (i = 0; i < 4; i++){
       u16 color2 = Vdp1RamReadWord(NULL, Vdp1Ram, (Vdp1RamReadWord(NULL, Vdp1Ram, regs->addr + 0x1C) << 3) + (i << 1));
       cmd->G[(i << 2) + 0] = (float)((color2 & 0x001F)) / (float)(0x1F) - 0.5f;
       cmd->G[(i << 2) + 1] = (float)((color2 & 0x03E0) >> 5) / (float)(0x1F) - 0.5f;
@@ -967,8 +970,8 @@ static int Vdp1PolylineDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back
 }
 
 static int Vdp1LineDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_framebuffer) {
+  int i;
   Vdp2 *varVdp2Regs = &Vdp2Lines[0];
-
 
   CONVERTCMD(cmd->CMDXA);
   CONVERTCMD(cmd->CMDYA);
@@ -988,7 +991,7 @@ static int Vdp1LineDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_fra
   memset(cmd->G, 0, sizeof(float)*16);
   if ((cmd->CMDPMOD & 4))
   {
-  for (int i = 0; i < 4; i++){
+  for (i = 0; i < 4; i++){
     u16 color2 = Vdp1RamReadWord(NULL, Vdp1Ram, (Vdp1RamReadWord(NULL, Vdp1Ram, regs->addr + 0x1C) << 3) + (i << 1));
     cmd->G[(i << 2) + 0] = (float)((color2 & 0x001F)) / (float)(0x1F) - 0.5f;
     cmd->G[(i << 2) + 1] = (float)((color2 & 0x03E0) >> 5) / (float)(0x1F) - 0.5f;
@@ -1006,6 +1009,7 @@ static int Vdp1LineDraw(vdp1cmd_struct *cmd, u8 * ram, Vdp1 * regs, u8* back_fra
 }
 
 static void setupSpriteLimit(vdp1cmdctrl_struct *ctrl){
+  unsigned int i;
   vdp1cmd_struct *cmd = &ctrl->cmd;
   u32 dot;
   switch ((cmd->CMDPMOD >> 3) & 0x7)
@@ -1025,14 +1029,15 @@ static void setupSpriteLimit(vdp1cmdctrl_struct *ctrl){
     ctrl->start_addr = cmd->CMDSRCA * 8;
     ctrl->end_addr = ctrl->start_addr + MAX(1,cmd->h)*MAX(1,cmd->w)/2;
 
-    for (int i = 0; i < MAX(1,cmd->h); i++)
+    for (i = 0; i < MAX(1,cmd->h); i++)
     {
       u16 j;
       j = 0;
       while (j < MAX(1,cmd->w)/2)
       {
+        int lutaddr;
         dot = Vdp1RamReadByte(NULL, Vdp1Ram, charAddr);
-        int lutaddr = (dot >> 4) * 2 + colorLut;
+        lutaddr = (dot >> 4) * 2 + colorLut;
         ctrl->start_addr = (ctrl->start_addr > lutaddr)?lutaddr:ctrl->start_addr;
         ctrl->end_addr = (ctrl->end_addr < lutaddr)?lutaddr:ctrl->end_addr;
         charAddr += 1;
@@ -1193,10 +1198,11 @@ int EvaluateCmdListHash(Vdp1 * regs){
 }
 
 static int sameCmd(vdp1cmd_struct* a, vdp1cmd_struct* b) {
+  int cmp;
   if (a == NULL) return 0;
   if (b == NULL) return 0;
   if (emptyCmd(a)) return 0;
-  int cmp = memcmp(a, b, 15*sizeof(int));
+  cmp = memcmp(a, b, 15*sizeof(int));
   if (cmp == 0) {
     return 1;
   }
@@ -1206,7 +1212,11 @@ static int sameCmd(vdp1cmd_struct* a, vdp1cmd_struct* b) {
 static int lastHash = -1;
 void Vdp1DrawCommands(u8 * ram, Vdp1 * regs, u8* back_framebuffer)
 {
+  int ret;
+  u16 command;
+  u32 commandCounter;
   int cylesPerLine  = getVdp1CyclesPerLine();
+  vdp1cmd_struct oldCmd;
 
   if (Vdp1External.status == VDP1_STATUS_IDLE) {
     #if 0
@@ -1242,24 +1252,20 @@ void Vdp1DrawCommands(u8 * ram, Vdp1 * regs, u8* back_framebuffer)
       return; // address error
     }
 
-   u16 command = Vdp1RamReadWord(NULL, ram, regs->addr);
-   u32 commandCounter = 0;
+   command = Vdp1RamReadWord(NULL, ram, regs->addr);
+   commandCounter = 0;
 
    Vdp1External.updateVdp1Ram = 0;
    vdp1Ram_update_start = 0x80000;
    vdp1Ram_update_end = 0x0;
    Vdp1External.checkEDSR = 0;
 
-   vdp1cmd_struct oldCmd;
-
    yabsys.vdp1cycles = 0;
    while (!(command & 0x8000) && nbCmdToProcess < CMD_QUEUE_SIZE) { // fix me
-     int ret;
       regs->COPR = (regs->addr & 0x7FFFF) >> 3;
       // First, process the command
       if (!(command & 0x4000)) { // if (!skip)
          vdp1cmdctrl_struct *ctrl = NULL;
-         int ret;
          if (vdp1_clock <= 0) {
            //No more clock cycle, wait next line
            return;
@@ -1587,7 +1593,7 @@ static void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr, u8* ram) {
 
 int Vdp1SaveState(void ** stream)
 {
-   int offset;
+   int size, offset;
 #ifdef IMPROVED_SAVESTATES
    int i = 0;
    u8 back_framebuffer[0x40000] = { 0 };
@@ -1609,7 +1615,7 @@ int Vdp1SaveState(void ** stream)
 #endif
 
     // VDP1 status
-   int size = sizeof(Vdp1External_struct);
+   size = sizeof(Vdp1External_struct);
    MemStateWrite((void *)(&size), sizeof(int),1,stream);
    MemStateWrite((void *)(&Vdp1External), sizeof(Vdp1External_struct),1,stream);
    return MemStateFinishHeader(stream, offset);
@@ -2412,6 +2418,8 @@ u32 *Vdp1DebugTexture(u32 number, int *w, int *h)
 
 u8 *Vdp1DebugRawTexture(u32 cmdNumber, int *width, int *height, int *numBytes)
 {
+   int i;
+   /*const */ int spriteCmdType;
    u16 cmdRaw;
    vdp1cmd_struct cmd;
    u32 cmdAddress;
@@ -2435,7 +2443,8 @@ u8 *Vdp1DebugRawTexture(u32 cmdNumber, int *width, int *height, int *numBytes)
 
    Vdp1ReadCommand(&cmd, cmdAddress, Vdp1Ram);
 
-   const int spriteCmdType = ((cmd.CMDPMOD >> 3) & 0x7);
+   // const
+   spriteCmdType = ((cmd.CMDPMOD >> 3) & 0x7);
    switch (cmd.CMDCTRL & 0x000F)
    {
       case 0: // Normal Sprite
@@ -2501,7 +2510,7 @@ u8 *Vdp1DebugRawTexture(u32 cmdNumber, int *width, int *height, int *numBytes)
    }
 
    // Read texture data directly from VRAM.
-   for (u32 i = 0; i < *numBytes; ++i)
+   for (i = 0; i < *numBytes; ++i)
    {
      texture[ i ] = T1ReadByte(Vdp1Ram, ((cmd.CMDSRCA * 8) + i) & 0x7FFFF);
    }
@@ -2582,9 +2591,10 @@ static void startField(void) {
 
 void Vdp1HBlankIN(void)
 {
+  int i;
   int needToCompose = 0;
   if (nbCmdToProcess > 0) {
-    for (int i = 0; i<nbCmdToProcess; i++) {
+    for (i = 0; i<nbCmdToProcess; i++) {
       if (cmdBufferBeingProcessed[i].ignitionLine == (yabsys.LineCount+1)) {
         if (!((cmdBufferBeingProcessed[i].start_addr >= vdp1Ram_update_end) ||
             (cmdBufferBeingProcessed[i].end_addr <= vdp1Ram_update_start))) {

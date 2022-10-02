@@ -289,6 +289,7 @@ void FASTCALL Vdp2ColorRamWriteLong(SH2_struct *context, u8* mem, u32 addr, u32 
 //////////////////////////////////////////////////////////////////////////////
 
 int Vdp2Init(void) {
+   int i;
    if ((Vdp2Regs = (Vdp2 *) calloc(1, sizeof(Vdp2))) == NULL)
       return -1;
 
@@ -302,7 +303,7 @@ int Vdp2Init(void) {
 
    memset(Vdp2ColorRam, 0xFF, 0x1000);
 #if defined(HAVE_LIBGL) || defined(__ANDROID__) || defined(IOS)
-   for (int i = 0; i < 0x1000; i += 2) {
+   for (i = 0; i < 0x1000; i += 2) {
      YglOnUpdateColorRamWord(i);
    }
 #endif
@@ -619,10 +620,11 @@ void Vdp2VBlankIN(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp2HBlankIN(void) {
-
   #if defined(HAVE_LIBGL) || defined(__ANDROID__) || defined(IOS)
+  int i=0;
+
   if (nbAddrToUpdate != 0){
-    for (int i=0; i<0x1000; i++)
+    for (i=0; i<0x1000; i++)
       if (addrToUpdate[i] != 0) {
         YglOnUpdateColorRamWord(i);
         addrToUpdate[i] = 0;
@@ -647,11 +649,12 @@ void Vdp2HBlankIN(void) {
 extern int vdp1_clock;
 void Vdp2HBlankOUT(void) {
   int i;
+  u32 cell_scroll_table_start_addr;
   updateVdp2ColorRam(yabsys.LineCount);
   if (yabsys.LineCount < yabsys.VBlankLineCount)
   {
     Vdp2Regs->TVSTAT &= ~0x0004;
-    u32 cell_scroll_table_start_addr = (Vdp2Regs->VCSTA.all & 0x7FFFE) << 1;
+    cell_scroll_table_start_addr = (Vdp2Regs->VCSTA.all & 0x7FFFE) << 1;
     memcpy(Vdp2Lines + yabsys.LineCount, Vdp2Regs, sizeof(Vdp2));
     for (i = 0; i < 88; i++)
     {
@@ -697,11 +700,21 @@ void Vdp2VBlankOUT(void) {
 
    if (Vdp2Regs->EXTEN & 0x200) // Should be revised for accuracy(should occur only occur on the line it happens at, etc.)
    {
+      int hcnt = 0xFFFF;
+      int vcnt;
+	   
       // Only Latch if EXLTEN is enabled
-      if (SmpcRegs->EXLE & 0x1)
-         Vdp2SendExternalLatch((PORTDATA1.data[3]<<8)|PORTDATA1.data[4], (PORTDATA1.data[5]<<8)|PORTDATA1.data[6]);
+      if (SmpcRegs->EXLE & 0x1) {
+	 hcnt = (PORTDATA1.data[3]<<8)|PORTDATA1.data[4];
+	 vcnt = (PORTDATA1.data[5]<<8)|PORTDATA1.data[6];
+      } else if (SmpcRegs->EXLE & 0x2) {
+	 hcnt = (PORTDATA2.data[3]<<8)|PORTDATA2.data[4];
+	 vcnt = (PORTDATA2.data[5]<<8)|PORTDATA2.data[6];
+      }
+      if (hcnt < 0xFFFF) {
+         Vdp2SendExternalLatch(hcnt, vcnt);
+      }
    }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -712,6 +725,7 @@ void Vdp2SendExternalLatch(int hcnt, int vcnt)
    Vdp2Regs->VCNT = vcnt;
    Vdp2Regs->TVSTAT |= 0x200;
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -775,10 +789,11 @@ u16 FASTCALL Vdp2ReadWord(SH2_struct *context, u8* mem, u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL Vdp2ReadLong(SH2_struct *context, u8* mem, u32 addr) {
+   u16 hi, lo;
    LOG("VDP2 register long read = %08X\n", addr);
    addr &= 0x1FF;
-   u16 hi = Vdp2ReadWord(context, mem, addr);
-   u16 lo = Vdp2ReadWord(context, mem, addr+2);
+   hi = Vdp2ReadWord(context, mem, addr);
+   lo = Vdp2ReadWord(context, mem, addr+2);
    return (hi<<16)|lo;
 }
 
@@ -1287,6 +1302,7 @@ void updateCyclePattern() {
 }
 
 void FASTCALL Vdp2WriteWord(SH2_struct *context, u8* mem, u32 addr, u16 val) {
+   int i;
    addr &= 0x1FF;
    switch (addr)
    {
@@ -1319,7 +1335,7 @@ void FASTCALL Vdp2WriteWord(SH2_struct *context, u8* mem, u32 addr, u16 val) {
            Vdp2Internal.ColorMode = (val >> 12) & 0x3;
            //A EXTRAIRE
 #if defined(HAVE_LIBGL) || defined(__ANDROID__) || defined(IOS)
-           for (int i = 0; i < 0x1000; i += 2) {
+           for (i = 0; i < 0x1000; i += 2) {
              addrToUpdate[nbAddrToUpdate++] = i;
            }
 #endif
