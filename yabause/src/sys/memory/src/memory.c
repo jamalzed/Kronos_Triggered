@@ -104,10 +104,10 @@ HANDLE hFMWrite = INVALID_HANDLE_VALUE;
 HANDLE hFile = INVALID_HANDLE_VALUE;
 void * YabMemMap(char * filename, u32 size ) {
 
-  struct stat sb;
+/*  struct stat sb;
   off_t len;
   char *p;
-  int fd;
+  int fd;*/
 
   hFile = CreateFileA(
     filename,
@@ -132,7 +132,7 @@ void * YabMemMap(char * filename, u32 size ) {
     PAGE_READWRITE,
     0,
     size,
-    "BACKUP");
+    L"BACKUP");
   if (hFMWrite == INVALID_HANDLE_VALUE)
     return NULL;
 
@@ -1328,7 +1328,7 @@ int MappedMemoryLoad(SH2_struct *sh, const char *filename, u32 addr)
    FILE *fp;
    long filesize;
    u8 *buffer;
-   u32 i;
+   long i;
    size_t num_read = 0;
 
    if (!filename)
@@ -1500,7 +1500,7 @@ static u8 header[16] = {
 
 int CheckBackupFile(FILE *fp) {
   int i, i2;
-  u32 i3;
+//  u32 i3;
 
   // Fill in header
   for (i2 = 0; i2 < 4; i2++) {
@@ -1515,12 +1515,12 @@ int CheckBackupFile(FILE *fp) {
 }
 
 int ExtendBackupFile(FILE *fp, u32 size ) {
-  u32 acsize;
+  u32 i, acsize;
   fseek(fp, 0, SEEK_END);
   acsize = ftell(fp);
   if (acsize < size) {
     // Clear the rest
-    for ( u32 i = (acsize&0xFFFFFFFE) ; i < size; i++)
+    for ( i = (acsize&0xFFFFFFFE) ; i < size; i++)
     {
       fputc(0x00, fp);
     }
@@ -1685,6 +1685,8 @@ int YabSaveState(const char *filename)
 {
    FILE *fp;
    int status;
+   void *buffer;
+   size_t size;
 
    // use a second set of savestates for movies
    filename = MakeMovieStateName(filename);
@@ -1696,8 +1698,6 @@ int YabSaveState(const char *filename)
       return -1;
 
    // retrieve savestate buffer and its size
-   void *buffer;
-   size_t size;
    status = YabSaveStateBuffer(&buffer, &size);
 
    // if retrieval failed, cleanup and stop
@@ -1874,6 +1874,8 @@ int YabLoadState(const char *filename)
 {
    FILE *fp;
    int status;
+   size_t size;
+   void *buffer;
 
    filename = MakeMovieStateName(filename);
    if (!filename)
@@ -1884,11 +1886,11 @@ int YabLoadState(const char *filename)
 
    // retrieve filesize
    fseek(fp, 0, SEEK_END);
-   size_t size = ftell(fp);
+   size = ftell(fp);
    fseek(fp, 0L, SEEK_SET);
 
    // prepare buffer
-   void *buffer = (void *)malloc(size);
+   buffer = (void *)malloc(size);
    if (buffer == NULL) {
       fclose(fp);
       return -1;

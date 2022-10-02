@@ -136,6 +136,7 @@ void FASTCALL Cs2WriteByte(SH2_struct *context, UNUSED u8* memory, u32 addr, u8 
 //////////////////////////////////////////////////////////////////////////////
 
 u16 FASTCALL Cs2ReadWord(SH2_struct *context, UNUSED u8* memory, u32 addr) {
+  int i;
   u16 val = 0;
   addr &= 0x3F; // fix me(I should really have proper mapping)
 
@@ -299,7 +300,7 @@ u16 FASTCALL Cs2ReadWord(SH2_struct *context, UNUSED u8* memory, u32 addr) {
                                        Cs2Area->datatranstype = CDB_DATATRANSTYPE_INVALID;
 
                                        // free blocks
-                                       for (int i = Cs2Area->datatranssectpos; i < (Cs2Area->datatranssectpos+Cs2Area->datasectstotrans); i++)
+                                       for (i = Cs2Area->datatranssectpos; i < (Cs2Area->datatranssectpos+Cs2Area->datasectstotrans); i++)
                                        {
                                           Cs2FreeBlock(Cs2Area->datatranspartition->block[i]);
                                           Cs2Area->datatranspartition->block[i] = NULL;
@@ -1609,6 +1610,7 @@ void Cs2EndDataTransfer(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2PlayDisc(void) {
+  int length;
   u32 pdspos;
   u32 pdepos;
   u32 pdpmode;
@@ -1694,7 +1696,7 @@ void Cs2PlayDisc(void) {
 
   Cs2Area->_periodiccycles = 0;
   // Calculate Seek time
-  int length = abs((int)Cs2Area->playendFAD - (int)Cs2Area->FAD);
+  length = abs((int)Cs2Area->playendFAD - (int)Cs2Area->FAD);
   CDLOG("cs2\t:Seek length = %d", length);
   // A CD is 74 min = 74*4500 = 333000 FAD Max
   // Max SEEK_TIME = 300000 us
@@ -2485,9 +2487,10 @@ void Cs2PutSectorData(void) {
          IOCheck_struct check = { 0, 0 };
          partition_struct *putpartition = &Cs2Area->partition[psdbufno];
          u32 i;
+		 int startpos;
 
          putpartition->size = 0;
-         int startpos = putpartition->numblocks;
+         startpos = putpartition->numblocks;
          for (i = 0; i < psdsectnum; i++)
          {
             putpartition->block[putpartition->numblocks] = Cs2AllocateBlock(&putpartition->blocknum[putpartition->numblocks], Cs2Area->putsectsize);
@@ -2518,10 +2521,15 @@ void Cs2PutSectorData(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2CopySectorData(void) {
- u32 source = Cs2Area->reg.CR3 >> 8;
+  u32 i;
+  u32 source = Cs2Area->reg.CR3 >> 8;
   u32 offset = Cs2Area->reg.CR2;
   u32 dest = Cs2Area->reg.CR1 & 0xFF;
   u32 count = Cs2Area->reg.CR4 & 0xFF;
+  u8 *dest_ptr;
+  u8 *src_ptr;
+  partition_struct *putpartition;
+  partition_struct *srcpartition;
 
   if (source >= 0x18 || dest >= 0x18) {
     Cs2Area->status = CDB_STAT_ERROR; // ToDo: check
@@ -2530,8 +2538,8 @@ void Cs2CopySectorData(void) {
     return;
   }
 
-  partition_struct *putpartition = &Cs2Area->partition[dest];
-  partition_struct *srcpartition = &Cs2Area->partition[source];
+  putpartition = &Cs2Area->partition[dest];
+  srcpartition = &Cs2Area->partition[source];
   if (offset == 0xFFFF) {
     offset = srcpartition->numblocks - 1;
   }
@@ -2540,10 +2548,10 @@ void Cs2CopySectorData(void) {
     count = srcpartition->numblocks - offset;
   }
 
-  for (int i = 0; i < count; i++) {
+  for (i = 0; i < count; i++) {
     putpartition->block[putpartition->numblocks] = Cs2AllocateBlock(&putpartition->blocknum[putpartition->numblocks],2352);
-    u8 *dest_ptr =  putpartition->block[putpartition->numblocks]->data;
-    u8 *src_ptr = srcpartition->block[offset+i]->data;
+    dest_ptr =  putpartition->block[putpartition->numblocks]->data;
+    src_ptr = srcpartition->block[offset+i]->data;
     memcpy(dest_ptr, src_ptr, sizeof(u8) * 2352);
     putpartition->numblocks++;
     putpartition->size += 2352;
@@ -2557,11 +2565,13 @@ void Cs2CopySectorData(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2MoveSectorData(void) {
-
+  u32 i;
   u32 source = Cs2Area->reg.CR3 >> 8;
   u32 offset = Cs2Area->reg.CR2;
   u32 dest = Cs2Area->reg.CR1 & 0xFF;
   u32 count = Cs2Area->reg.CR4 & 0xFF;
+  partition_struct *putpartition;
+  partition_struct *srcpartition;
 
   if (source >= 0x18 || dest >= 0x18) {
     Cs2Area->status = CDB_STAT_ERROR; // ToDo: check
@@ -2570,8 +2580,8 @@ void Cs2MoveSectorData(void) {
     return;
   }
 
-  partition_struct *putpartition = &Cs2Area->partition[dest];
-  partition_struct *srcpartition = &Cs2Area->partition[source];
+  putpartition = &Cs2Area->partition[dest];
+  srcpartition = &Cs2Area->partition[source];
   if (offset == 0xFFFF) {
     offset = srcpartition->numblocks - 1;
   }
@@ -2580,7 +2590,7 @@ void Cs2MoveSectorData(void) {
     count = srcpartition->numblocks - offset;
   }
 
-  for (int i = 0; i < count; i++) {
+  for (i = 0; i < count; i++) {
     putpartition->block[putpartition->numblocks] = srcpartition->block[offset + i];
     srcpartition->numblocks--;
     srcpartition->size -= 2352;
@@ -3895,11 +3905,11 @@ u8 Cs2GetIP(int autoregion) {
       // Make sure we're dealing with a saturn game
       if (memcmp(buf, "SEGA SEGASATURN", 15) == 0)
       {
+         char tmp[11];
          memcpy(cdip->system, buf, 16);
          cdip->system[16]='\0';
          memcpy(cdip->company, buf+0x10, 16);
          cdip->company[16]='\0';
-         char tmp[11];
          memcpy(tmp, buf+0x20, 0x0A);
          tmp[10]='\0';
          sscanf(tmp, "%s", cdip->itemnum);
@@ -4086,11 +4096,11 @@ int Cs2SaveState(void ** stream) {
    // Write partition data
    for (i = 0; i < MAX_SELECTORS; i++)
    {
+      u32 index = 0;
       MemStateWrite((void *)&Cs2Area->partition[i].size, 4, 1, stream);
       MemStateWrite((void *)Cs2Area->partition[i].blocknum, 1, MAX_BLOCKS, stream);
       MemStateWrite((void *)&Cs2Area->partition[i].numblocks, 1, 1, stream);
 
-      u32 index = 0;
       for (i2 = 0; i2 < MAX_BLOCKS; i2++)
       {
         if (Cs2Area->partition[i].block[i2] == NULL)
@@ -4228,11 +4238,12 @@ int Cs2LoadState(const void * stream, int version, int size) {
    // Read partition data
    for (i = 0; i < MAX_SELECTORS; i++)
    {
+      u32 index=0;
+
       MemStateRead((void *)&Cs2Area->partition[i].size, 4, 1, stream);
       MemStateRead((void *)Cs2Area->partition[i].blocknum, 1, MAX_BLOCKS, stream);
       MemStateRead((void *)&Cs2Area->partition[i].numblocks, 1, 1, stream);
 
-      u32 index=0;
       for (i2 = 0; i2 < MAX_BLOCKS; i2++)
       {
         MemStateRead((void *)&index, 4, 1, stream);

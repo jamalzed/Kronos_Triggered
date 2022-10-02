@@ -513,8 +513,9 @@ void cyptoSetSubkey(u16 subKey)
 
 static u16 bitswap16(u16 in, const u8* vec)
 {
+  int i;
   u16 ret = 0;
-  for (int i = 0; i<16; i++) {
+  for (i = 0; i<16; i++) {
     ret |= ((in >> vec[i])&0x1)<<(15-i); //Peut etre 16-i...
   }
   return ret;
@@ -633,13 +634,13 @@ static u16 m_read(uint32_t addr)
 
 static u16 get_decrypted_16()
 {
-  uint16_t enc;
+  uint16_t enc, dec, res;
 
   enc = m_read(cryptoAddr);
 
-  uint16_t dec = block_decrypt(cryptoKey, cryptoSubKey, cryptoAddr, enc);
+  dec = block_decrypt(cryptoKey, cryptoSubKey, cryptoAddr, enc);
 
-  uint16_t res = (dec & 3) | (dec_hist & 0xfffc);
+  res = (dec & 3) | (dec_hist & 0xfffc);
   dec_hist = dec;
 
   cryptoAddr ++;
@@ -649,6 +650,7 @@ static u16 get_decrypted_16()
 
 static void cryptoStart()
 {
+  u32 blocky;
   block_pos = 0;
   done_compression = 0;
   buffer_pos = BUFFER_SIZE;
@@ -666,7 +668,7 @@ static void cryptoStart()
   dec_header |= get_decrypted_16();
 
   block_numlines = ((dec_header & 0x000000ff) >> 0) + 1;
-  u32 blocky = ((dec_header & 0x0001ff00) >> 8) + 1;
+  blocky = ((dec_header & 0x0001ff00) >> 8) + 1;
   block_size = block_numlines * blocky;
 
   if(dec_header & FLAG_COMPRESSED)
@@ -681,6 +683,7 @@ static void cryptoStart()
 
 static u32 get_compressed_bit()
 {
+	u32 res;
 //  if(buffer_pos == BUFFER_SIZE)
 //      enc_fill();
 
@@ -701,7 +704,7 @@ static u32 get_compressed_bit()
 
 //  if (bufferBit ==7) printf("using byte %02x\n", buffer2[(buffer_pos&1) ^ 1]);
 
-	u32 res = (buffer2[(buffer_pos&1)^1] >> bufferBit) & 1;
+	res = (buffer2[(buffer_pos&1)^1] >> bufferBit) & 1;
 	bufferBit--;
 	if(bufferBit == -1) {
 		bufferBit = 7;
@@ -712,6 +715,7 @@ static u32 get_compressed_bit()
 
 static void line_fill()
 {
+	u32 i;
 	uint8_t *lc = line_buffer;
 	uint8_t *lp = line_buffer_prev;
 
@@ -719,7 +723,7 @@ static void line_fill()
 
 	line_buffer_pos = 0;
 
-	for(int i=0; i != line_buffer_size;) {
+	for(i=0; i != line_buffer_size;) {
 		// vlc 0: start of line
 		// vlc 1: interior of line
 		// vlc 2-9: 7-1 bytes from end of line
@@ -740,12 +744,14 @@ static void line_fill()
 
 				static int offsets[4] = {0, 1, 0, -1};
 				int offset = offsets[(tmp & 0x18) >> 3];
-				for(int j=0; j != count; j++) {
+				int j;
+				for(j=0; j != count; j++) {
 					lc[i^1] = lp[((i+offset) % line_buffer_size)^1];
 					i++;
 				}
 			} else {
 				// Get a byte in the stream and write n times
+				int j;
 				uint8_t byte;
 				byte =         get_compressed_bit()  << 1;
 				byte = (byte | get_compressed_bit()) << 1;
@@ -755,7 +761,7 @@ static void line_fill()
 				byte = (byte | get_compressed_bit()) << 1;
 				byte = (byte | get_compressed_bit()) << 1;
 				byte =  byte | get_compressed_bit();
-				for(int j=0; j != count; j++)
+				for(j=0; j != count; j++)
 					lc[(i++)^1] = byte;
 			}
 		}
@@ -772,7 +778,8 @@ static void line_fill()
 
 static void enc_fill()
 {
-	for(int i = 0; i != BUFFER_SIZE; i+=2) {
+	int i;
+	for(i = 0; i != BUFFER_SIZE; i+=2) {
 		uint16_t val = get_decrypted_16();
 		buffer[i] = val;
 		buffer[i+1] = val >> 8;

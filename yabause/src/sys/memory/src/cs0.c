@@ -1186,8 +1186,9 @@ static u16 FASTCALL ROMSTVCs1ReadWord(SH2_struct *context, UNUSED u8* memory, u3
 
 static u32 FASTCALL ROMSTVCs1ReadLong(SH2_struct *context, UNUSED u8* memory, u32 addr)
 {
+  u8 decryptCmd;
   LOGSTV("%s %x\n", __FUNCTION__, addr);
-  u8 decryptCmd = addr & 0xF;
+  decryptCmd = addr & 0xF;
   if(decryptOn & 0x1)//protection calculation is activated
   {
     if(decryptCmd == 0xc)
@@ -1206,8 +1207,8 @@ static u32 FASTCALL ROMSTVCs1ReadLong(SH2_struct *context, UNUSED u8* memory, u3
 
 static void FASTCALL ROMSTVCs1WriteByte(SH2_struct *context, UNUSED u8* memory, u32 addr, u8 val)
 {
-  LOGSTV("%s %x=%x\n", __FUNCTION__, addr,val);
   u8 decryptCmd = addr & 0xF;
+  LOGSTV("%s %x=%x\n", __FUNCTION__, addr,val);
   if (decryptCmd == 0x1)
   {
     decryptOn = val&0x1;
@@ -1220,8 +1221,9 @@ static void FASTCALL ROMSTVCs1WriteByte(SH2_struct *context, UNUSED u8* memory, 
 
 static void FASTCALL ROMSTVCs1WriteWord(SH2_struct *context, UNUSED u8* memory, u32 addr, u16 val)
 {
-  LOGSTV("%s %x=%x\n", __FUNCTION__, addr, val);
   u8 decryptCmd = addr & 0xF;
+  LOGSTV("%s %x=%x\n", __FUNCTION__, addr, val);
+
   if (decryptCmd == 0x1)
   {
     decryptOn = val&0x1;
