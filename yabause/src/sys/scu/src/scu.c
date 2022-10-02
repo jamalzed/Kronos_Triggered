@@ -29,7 +29,9 @@
 #include "memory.h"
 #include "sh2core.h"
 #include "yabause.h"
+#if !_MSC_VER || __INTEL_COMPILER
 #include <inttypes.h>
+#endif
 
 Scu * ScuRegs;
 scudspregs_struct * ScuDsp;
@@ -48,7 +50,8 @@ static FILE * slogp = NULL;
 //////////////////////////////////////////////////////////////////////////////
 
 int ScuInit(void) {
-
+   int i;
+   
    if ((ScuRegs = (Scu *) calloc(1, sizeof(Scu))) == NULL)
       return -1;
 
@@ -64,7 +67,7 @@ int ScuInit(void) {
 
    ScuDsp->jmpaddr = 0xFFFFFFFF;
 
-   for (int i = 0; i < MAX_BREAKPOINTS; i++)
+   for (i = 0; i < MAX_BREAKPOINTS; i++)
       ScuBP->codebreakpoint[i].addr = 0xFFFFFFFF;
    ScuBP->numcodebreakpoints = 0;
    ScuBP->BreakpointCallBack=NULL;
@@ -726,16 +729,16 @@ void dsp_dma03(scudspregs_struct *sc, u32 inst)
   u32 Counter = sc->dsp_dma_size;
   u32 i;
   int sel;
-
-  sel = (inst >> 8) & 0x7;
   int index = 0;
-
   const u32 mode = (inst >> 15) & 0x7;
   const u32 add = (1 << (mode & 0x2)) &~1;
+  u32 abus_check;
+
+  sel = (inst >> 8) & 0x7;
 
   //LOG("DSP DMA03 read addr=%08X cnt= %d add = %d\n", (sc->RA0M << 2), Counter, add);
 
-  u32 abus_check = ((sc->RA0M << 2) & 0x0FF00000);
+  abus_check = ((sc->RA0M << 2) & 0x0FF00000);
   if (abus_check >= 0x02000000 && abus_check < 0x05900000){
     for (i = 0; i < Counter; i++)
     {
@@ -985,6 +988,8 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
   //LOG("DoDMA src=%08X,dst=%08X,size=%d, ra:%d/wa:%d flame=%d:%d\n",
   //  dma->ReadAddress, dma->WriteAddress, dma->TransferNumber, dma->ReadAdd, dma->WriteAdd, yabsys.frame_count, yabsys.LineCount);
   u32 cycle = 0;
+  u32 start;
+
   if (dma->ReadAdd == 0) {
     // DMA fill
     // Is it a constant source or a register whose value can change from
@@ -1009,7 +1014,7 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
           val = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
         }
 
-        u32 start = dma->WriteAddress;
+        start = dma->WriteAddress;
         while ( *time > 0 ) {
           *time -= 1;
           DMAMappedMemoryWriteWord(dma->WriteAddress, (u16)(val >> 16));
@@ -1029,8 +1034,10 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
       else {
         u32 start = dma->WriteAddress;
         while ( *time > 0) {
+          u32 tmp;
+
           *time -= 1;
-          u32 tmp = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
+          tmp = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
           DMAMappedMemoryWriteWord(dma->WriteAddress, (u16)(tmp >> 16));
           dma->WriteAddress += dma->WriteAdd;
           DMAMappedMemoryWriteWord(dma->WriteAddress, (u16)tmp);
@@ -1067,8 +1074,10 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
       }
       else {
         while (*time > 0) {
-          *time -= 1;
-          u32 val = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
+          u32 val;
+		  
+		  *time -= 1;
+          val = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
           DMAMappedMemoryWriteLong(dma->WriteAddress, val);
           dma->ReadAddress += dma->ReadAdd;
           dma->WriteAddress += dma->WriteAdd;
@@ -1095,8 +1104,10 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
       u32 counter = 0;
       u32 start = dma->WriteAddress;
       while (*time > 0) {
-        *time -= 1;
-        u16 tmp = DMAMappedMemoryReadWord((dma->ReadAddress & 0x0FFFFFFF));
+        u16 tmp;
+		
+		*time -= 1;
+        tmp = DMAMappedMemoryReadWord((dma->ReadAddress & 0x0FFFFFFF));
         DMAMappedMemoryWriteWord(dma->WriteAddress, tmp);
         dma->WriteAddress += dma->WriteAdd;
         dma->ReadAddress += 2;
@@ -1113,8 +1124,10 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
     else if (((dma->ReadAddress & 0x1FFFFFFF) >= 0x5A00000 && (dma->ReadAddress & 0x1FFFFFFF) < 0x5FF0000)) {
       u32 start = dma->WriteAddress;
       while ( *time > 0) {
-        *time -= 1;
-        u16 tmp = DMAMappedMemoryReadWord((dma->ReadAddress & 0x0FFFFFFF));
+        u16 tmp;
+		
+		*time -= 1;
+        tmp = DMAMappedMemoryReadWord((dma->ReadAddress & 0x0FFFFFFF));
         DMAMappedMemoryWriteWord(dma->WriteAddress, tmp);
         dma->WriteAddress += (dma->WriteAdd >> 1);
         dma->ReadAddress += 2;
@@ -1131,9 +1144,11 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
     else {
       u32 counter = 0;
       u32 start = dma->WriteAddress;
+	  u32 val;
+
       while (*time > 0) {
         *time -= 1;
-        u32 val = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
+        val = DMAMappedMemoryReadLong((dma->ReadAddress & 0x0FFFFFFF));
         DMAMappedMemoryWriteLong(dma->WriteAddress, val );
         dma->ReadAddress += 4;
         dma->WriteAddress += dma->WriteAdd;
@@ -1262,7 +1277,7 @@ void ScuExec(u32 timing) {
      //}
    }
 #else
-  ScuDmaProc(ScuRegs, (int)timing<<4+0xF);
+  ScuDmaProc(ScuRegs, (int)((timing<<4)+0xF));
 #endif
 
    // is dsp executing?
@@ -1282,10 +1297,11 @@ void ScuExec(u32 timing) {
 #endif
      s32 dsp_counter = (s32)timing;
       while (dsp_counter > 0) {
+		 int i;
          u32 instruction;
 
          // Make sure it isn't one of our breakpoints
-         for (int i=0; i < ScuBP->numcodebreakpoints; i++) {
+         for (i=0; i < ScuBP->numcodebreakpoints; i++) {
             if ((ScuDsp->PC == ScuBP->codebreakpoint[i].addr) && ScuBP->inbreakpoint == 0) {
                ScuBP->inbreakpoint = 1;
                if (ScuBP->BreakpointCallBack) ScuBP->BreakpointCallBack(ScuBP->codebreakpoint[i].addr);
@@ -1661,6 +1677,7 @@ void ScuExec(u32 timing) {
                break;
             case 0x03: // Other
             {
+               int Counter = 0;
                switch((instruction >> 28) & 0xF) {
                  case 0x0C: // DMA Commands
                  {
@@ -1673,7 +1690,6 @@ void ScuExec(u32 timing) {
                    ScuDsp->dsp_dma_instruction = instruction;
                    ScuDsp->ProgControlPort.part.T0 = 1;
 
-                   int Counter = 0;
                    if ( ((instruction >> 10) & 0x1F) == 0x00 ||
                         ((instruction >> 10) & 0x1F) == 0x04  ||
                         ((instruction >> 11) & 0x0F) == 0x08 ||
@@ -2967,10 +2983,11 @@ void sendSlave(int vector, int level) {
 }
 void ScuTestInterruptMask()
 {
+   int i;
    int mask = 0;
    int IRLSet = 0;
    // Handle SCU interrupts
-   for (int i = 0; i <= EXT_15; i++)
+   for (i = 0; i <= EXT_15; i++)
    {
      if ((ScuRegs->ITEdge & ScuInterrupt[i].status) != 0) {
        mask = ScuInterrupt[i].mask;
@@ -3015,6 +3032,7 @@ static INLINE void SetInterrupt(u8 id) {
 
 // 3.2 DMA control register
 static INLINE void ScuChekIntrruptDMA(int id){
+    //scudmainfo_struct dmainfo;
 
   if ((ScuRegs->D0EN & 0x100) && (ScuRegs->D0MD & 0x07) == id){
     if (ScuRegs->dma0.TransferNumber > 0) {
@@ -3038,7 +3056,6 @@ static INLINE void ScuChekIntrruptDMA(int id){
     if (ScuRegs->dma1.TransferNumber > 0) {
       ScuDmaProc(ScuRegs, 0x7FFFFFFF);
     }
-    scudmainfo_struct dmainfo;
     ScuRegs->dma1.mode = 1;
     ScuRegs->dma1.ReadAddress = ScuRegs->D1R;
     ScuRegs->dma1.WriteAddress = ScuRegs->D1W;
@@ -3317,6 +3334,7 @@ int ScuSaveState(void ** stream)
 
 int ScuLoadState(const void * stream, UNUSED int version, int size)
 {
+	u32 ssize;
    // Read registers and internal variables
    if (version < 3) {
      MemStateRead((void *)ScuRegs, sizeof(Scu)-sizeof(scudmainfo_struct)*3, 1, stream);
@@ -3324,7 +3342,7 @@ int ScuLoadState(const void * stream, UNUSED int version, int size)
      ScuRegs->dma1.TransferNumber = 0;
      ScuRegs->dma2.TransferNumber = 0;
 
-     u32 ssize = sizeof(scudspregs_struct)
+     ssize = sizeof(scudspregs_struct)
        - sizeof(ScuDsp->dsp_dma_instruction)
        - sizeof(ScuDsp->dsp_dma_wait)
        - sizeof(ScuDsp->dsp_dma_size)
@@ -3344,7 +3362,7 @@ int ScuLoadState(const void * stream, UNUSED int version, int size)
 
      MemStateRead((void *)ScuRegs, sizeof(Scu), 1, stream);
 
-     u32 ssize = sizeof(scudspregs_struct)
+     ssize = sizeof(scudspregs_struct)
        - sizeof(ScuDsp->dsp_dma_instruction)
        - sizeof(ScuDsp->dsp_dma_wait)
        - sizeof(ScuDsp->dsp_dma_size)
