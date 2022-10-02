@@ -33,6 +33,10 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma comment(lib, "WS2_32.lib")
+#endif
+
 static fd_set read_fds;
 static fd_set write_fds;
 
