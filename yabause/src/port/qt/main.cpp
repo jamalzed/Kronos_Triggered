@@ -56,7 +56,7 @@ int main( int argc, char** argv )
 #endif
 	QApplication app( argc, argv );
 	// init application
-	app.setApplicationName( QString( "Kronos v%1" ).arg( VERSION ) );
+	app.setApplicationName( QString( "Kronos Triggered v%1" ).arg( VERSION ) );
 	// init settings
 	Settings::setIniInformations();
 #ifdef HAVE_LIBMINI18N
