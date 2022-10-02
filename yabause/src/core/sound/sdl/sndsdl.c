@@ -25,6 +25,9 @@
 
 #include <stdlib.h>
 
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_HANDLED
+#endif
 #if defined(__APPLE__) || defined(GEKKO)
  #ifdef HAVE_LIBSDL2
   #include <SDL2/SDL.h>
